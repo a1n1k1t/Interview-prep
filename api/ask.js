@@ -13,8 +13,11 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages })
     });
-    const data = await r.json();
-    if (!r.ok) return res.status(500).json({ error: data });
+        const data = await r.json();
+    if (!r.ok) {
+      const msg = data?.error?.message || JSON.stringify(data);
+      return res.status(500).json({ error: msg });
+    }
     const text = (data.content || []).map(c => c.text || '').join('');
     if (json) {
       let parsed;
