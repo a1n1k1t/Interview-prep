@@ -40,6 +40,7 @@ td,th{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left}
 <header>
   <h1>🎤 InterviewIQ</h1>
   <div class="row">
+    <span class="pill" style="cursor:pointer" onclick="changeSyncCode()" id="syncPill">Sync: …</span>
     <select id="profileSel"></select>
     <button class="sec" onclick="addProfile()">+ Guest</button>
   </div>
@@ -47,17 +48,28 @@ td,th{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left}
 <nav id="nav"></nav>
 <main id="main"></main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ---- fill these in from your Supabase project (Settings → API) ----
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function getCode(){
+  let c=localStorage.getItem('ic_sync_code');
+  if(!c){ c=Math.random().toString(36).slice(2,8).toUpperCase(); localStorage.setItem('ic_sync_code',c); }
+  return c;
+}
+function changeSyncCode(){
+  const cur=getCode();
+  const v=prompt("Your sync code (enter the SAME code on every device to link them):",cur);
+  if(v && v.trim()){ localStorage.setItem('ic_sync_code',v.trim().toUpperCase()); location.reload(); }
+}
+
 let personas=[]; let tab='setup';
 let iv={active:false,persona:null,turns:[],qn:0,max:5,pending:null};
 let rec={active:false,ctx:null,stream:null,analyser:null,recog:null,final:'',interim:'',vol:[],pitch:[],loopId:null,start:0};
 const MAXQ=5;
-const LS_KEY='ic_data_v1';
-
-// ---------- local storage "db" ----------
-function loadAll(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'{"personas":[],"sessions":[]}'); }catch(e){ return {personas:[],sessions:[]}; } }
-function saveAll(d){ try{ localStorage.setItem(LS_KEY, JSON.stringify(d)); }catch(e){} }
-
 function profiles(){ try{ return JSON.parse(localStorage.getItem('ic_profiles')||'[{"id":"me","label":"Me"}]'); }catch(e){ return [{id:'me',label:'Me'}]; } }
 function setProfiles(p){ try{ localStorage.setItem('ic_profiles',JSON.stringify(p)); }catch(e){} }
 function activeProfile(){ try{ return localStorage.getItem('ic_active')||'me'; }catch(e){ return 'me'; } }
@@ -86,17 +98,19 @@ function buildNav(){
   const tabs=[["setup","Setup"],["interview","Interview"],["audio","Audio Analysis"],["dashboard","Dashboard"],["compare","Compare"]];
   document.getElementById('nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
 }
-function go(t){tab=t;buildNav();render();}
+async function go(t){tab=t;buildNav();await render();}
 
-function loadPersonas(){ personas=loadAll().personas.slice().reverse(); }
-function savePersona(){
+async function loadPersonas(){
+  const {data,error}=await supa.from('personas').select('*').eq('sync_code',getCode()).order('created_at',{ascending:false});
+  personas = error||!data ? [] : data.map(r=>({id:r.id,company:r.company,role:r.role,jdText:r.jd_text,label:r.label}));
+}
+async function savePersona(){
   const company=document.getElementById('p-company').value.trim();
   const role=document.getElementById('p-role').value.trim();
   const jdText=document.getElementById('p-jd').value.trim();
   if(!role){alert("Add at least a role.");return;}
-  const d=loadAll();
-  d.personas.push({id:'p'+Date.now(),company,role,jdText:jdText.slice(0,6000),label:(company?company+" — ":"")+role,createdAt:new Date().toISOString()});
-  saveAll(d); loadPersonas(); render();
+  await supa.from('personas').insert({sync_code:getCode(),company,role,jd_text:jdText.slice(0,6000),label:(company?company+" — ":"")+role});
+  await loadPersonas(); render();
 }
 function renderSetup(){
   document.getElementById('main').innerHTML=`
@@ -224,7 +238,7 @@ async function finishInterview(){
   }catch(e){}
   const scores=scoreMetrics(agg);
   const session={kind:"interview",profile:activeProfile(),profileLabel:profiles().find(x=>x.id===activeProfile())?.label||activeProfile(),personaLabel:iv.persona.label,createdAt:new Date().toISOString(),...agg,...scores,...fb};
-  const d=loadAll(); d.sessions.push(session); saveAll(d);
+  await supa.from('sessions').insert({sync_code:getCode(),kind:session.kind,profile:session.profile,data:session});
   iv.active=false; iv.result=session;
   renderInterview();
 }
@@ -298,18 +312,20 @@ async function aaToggle(){
     const scores=scoreMetrics(m);
     const session={kind:"audio_analysis",profile:activeProfile(),profileLabel:profiles().find(x=>x.id===activeProfile())?.label||activeProfile(),topic:aa.topic,createdAt:new Date().toISOString(),...m,...scores,...fb};
     delete session.transcript;
-    const d=loadAll(); d.sessions.push(session); saveAll(d);
+    await supa.from('sessions').insert({sync_code:getCode(),kind:session.kind,profile:session.profile,data:session});
     aa.result=session; renderAudio();
   }
 }
 
 // ---------- dashboard ----------
-function loadSessions(profileId){
-  return loadAll().sessions.filter(s=>s.profile===profileId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+async function loadSessions(profileId){
+  const {data,error}=await supa.from('sessions').select('*').eq('sync_code',getCode()).eq('profile',profileId).order('created_at',{ascending:false}).limit(50);
+  return error||!data ? [] : data.map(r=>r.data);
 }
-function renderDashboard(){
+async function renderDashboard(){
   const el=document.getElementById('main');
-  const sessions=loadSessions(activeProfile());
+  el.innerHTML='<div class="card">Loading…</div>';
+  const sessions=await loadSessions(activeProfile());
   if(!sessions.length){ el.innerHTML='<div class="card">No sessions yet for this profile — do a mock interview or audio analysis first.</div>'; return; }
   const avg=k=>Math.round(sessions.reduce((a,s)=>a+(s[k]||0),0)/sessions.length);
   const recent=sessions.slice(0,10).reverse();
@@ -331,9 +347,9 @@ function renderCompare(){
   <div class="row" style="margin-top:10px"><button onclick="runCompare()">Compare</button></div>
   <div id="cp-out" style="margin-top:12px"></div></div>`;
 }
-function runCompare(){
+async function runCompare(){
   const a=document.getElementById('cpA').value, b=document.getElementById('cpB').value;
-  const sa=loadSessions(a), sb=loadSessions(b);
+  const [sa,sb]=await Promise.all([loadSessions(a),loadSessions(b)]);
   const avg=(arr,k)=>arr.length?Math.round(arr.reduce((s,x)=>s+(x[k]||0),0)/arr.length):0;
   const rows=[["Sessions",sa.length,sb.length],["Overall score",avg(sa,'overallScore'),avg(sb,'overallScore')],["Pace (wpm)",avg(sa,'wpm'),avg(sb,'wpm')],["Fillers",avg(sa,'fillers'),avg(sb,'fillers')],["Pitch variation",avg(sa,'pVar'),avg(sb,'pVar')]];
   const la=profiles().find(x=>x.id===a)?.label||a, lb=profiles().find(x=>x.id===b)?.label||b;
@@ -341,14 +357,17 @@ function runCompare(){
   ${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</table>`;
 }
 
-function render(){
+async function render(){
   if(tab==='setup') renderSetup();
   else if(tab==='interview') renderInterview();
   else if(tab==='audio') renderAudio();
-  else if(tab==='dashboard') renderDashboard();
+  else if(tab==='dashboard') await renderDashboard();
   else if(tab==='compare') renderCompare();
 }
-function init(){ renderProfileSel(); buildNav(); loadPersonas(); render(); }
+async function init(){
+  document.getElementById('syncPill').textContent='Sync: '+getCode();
+  renderProfileSel(); buildNav(); await loadPersonas(); await render();
+}
 init();
 </script>
 </body>
