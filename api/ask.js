@@ -1,9 +1,11 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
-  const { input, json } = req.body || {};
+  const { input, json, search } = req.body || {};
   if (!input) return res.status(400).json({ error: 'Missing input' });
   try {
     const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
+    const body = { model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages };
+    if (search) body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -11,9 +13,9 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json'
       },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages })
+      body: JSON.stringify(body)
     });
-        const data = await r.json();
+    const data = await r.json();
     if (!r.ok) {
       const msg = data?.error?.message || JSON.stringify(data);
       return res.status(500).json({ error: msg });
