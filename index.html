@@ -89,11 +89,10 @@ document.getElementById('profileSel').onchange=e=>{setActive(e.target.value); re
 // ---------- ask Claude via serverless proxy ----------
 async function askClaude(input, wantJson){
   const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,json:!!wantJson})});
-  if(!r.ok) throw new Error('upstream_error');
   const data=await r.json();
+  if(!r.ok) throw new Error(typeof data.error==='string'?data.error:JSON.stringify(data.error));
   return wantJson ? data : {text:data.text};
 }
-
 function buildNav(){
   const tabs=[["setup","Setup"],["interview","Interview"],["audio","Audio Analysis"],["dashboard","Dashboard"],["compare","Compare"]];
   document.getElementById('nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
@@ -212,7 +211,7 @@ async function askQuestion(){
     const r=await askClaude(iv.turns);
     iv.turns.push({role:"assistant",content:r.text});
     iv.qn++;
-  }catch(e){ iv.error="Something went wrong reaching Claude — check your API key / usage and try again."; }
+    }catch(e){ iv.error="Claude error: "+e.message; }
   renderInterview();
 }
 async function toggleRecord(cb){
