@@ -5,44 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>InterviewIQ</title>
 <style>
-:root{--bg:#f7f7f8;--panel:#fff;--text:#1a1a1a;--muted:#666;--border:#e2e2e5;--accent:#4f46e5;--danger:#dc2626;}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151517;--panel:#1f1f23;--text:#eee;--muted:#999;--border:#333;}}
+:root{--bg:#f4f5f9;--panel:#fff;--text:#181825;--muted:#6b7280;--border:#e5e7eb;--accent:#5b48ee;--accent2:#22c55e;--danger:#ef4444;--radius:14px;--shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0f0f13;--panel:#191921;--text:#f1f1f4;--muted:#9a9aa6;--border:#2b2b36;--shadow:0 1px 3px rgba(0,0,0,.5);}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px}
-header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
-h1{font-size:18px;margin:0}
-select,input,textarea,button{font:inherit;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
-button{cursor:pointer;background:var(--accent);color:#fff;border:none}
-button.sec{background:var(--panel);color:var(--text);border:1px solid var(--border)}
-nav{display:flex;gap:6px;padding:10px 18px;border-bottom:1px solid var(--border);overflow-x:auto}
-nav button{background:transparent;color:var(--muted);border-bottom:2px solid transparent;border-radius:0;padding:8px 6px}
-nav button.on{color:var(--accent);border-color:var(--accent);font-weight:600}
-main{max-width:760px;margin:0 auto;padding:18px}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',-apple-system,Roboto,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+header{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
+header h1{font-size:19px;margin:0;display:flex;align-items:center;gap:8px;white-space:nowrap}
+header select,header button{font-size:12px;padding:7px 10px}
+select,input,textarea,button{font:inherit;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 12px}
+button{cursor:pointer;background:var(--accent);color:#fff;border:none;font-weight:600}
+button:hover{opacity:.9}
+button.sec{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)}
+main button.sec{background:var(--panel);color:var(--text);border:1px solid var(--border);font-weight:500}
+button:disabled{opacity:.5;cursor:default}
+nav{display:flex;gap:4px;padding:10px 20px 0;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--border)}
+nav button{background:transparent;color:var(--muted);border:none;border-radius:10px 10px 0 0;padding:10px 14px;font-weight:600;white-space:nowrap}
+nav button.on{color:var(--accent);background:var(--bg)}
+main{max-width:820px;margin:0 auto;padding:20px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h3{margin-top:0}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
 textarea{width:100%;min-height:80px;resize:vertical}
 input,select{width:100%}
-.q{font-size:17px;font-weight:600;margin:6px 0 12px}
-.metric{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin:3px 4px 0 0;font-size:13px}
+.q{font-size:18px;font-weight:700;margin:6px 0 14px;line-height:1.4}
+.metric{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:7px 12px;margin:3px 5px 0 0;font-size:13px;font-weight:600}
 .bar-wrap{display:flex;align-items:flex-end;gap:4px;height:70px;margin-top:8px}
-.bar{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.bar{flex:1;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
 .hint{color:var(--muted);font-size:12px}
-.pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:12px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:12px;font-weight:600}
 table{width:100%;border-collapse:collapse;font-size:13px}
-td,th{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left}
+td,th{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-#rec-dot{display:none;width:10px;height:10px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite}
+.sess-row{border-bottom:1px solid var(--border);padding:10px 0}
+.sess-row:last-child{border-bottom:none}
+#rec-dot{display:none;width:10px;height:10px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite;margin-right:6px}
 @keyframes pulse{50%{opacity:.3}}
+pre{white-space:pre-wrap;font-size:12px;background:var(--bg);padding:10px;border-radius:8px}
 </style>
 </head>
 <body>
 <header>
   <h1>🎤 InterviewIQ</h1>
   <div class="row">
-    <span class="pill" style="cursor:pointer" onclick="changeSyncCode()" id="syncPill">Sync: …</span>
+    <span class="pill" style="cursor:pointer;background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.35)" onclick="changeSyncCode()" id="syncPill">Sync: …</span>
     <select id="profileSel"></select>
     <button class="sec" onclick="addProfile()">+ Guest</button>
+    <button class="sec" id="voiceBtn" onclick="toggleVoice()">🔊 Off</button>
+    <select id="voiceSel" onchange="setVoiceName(this.value)" style="width:auto">
+      <option value="en-US-GuyNeural">Guy</option>
+      <option value="en-US-AriaNeural">Aria</option>
+    </select>
   </div>
 </header>
 <nav id="nav"></nav>
@@ -51,8 +64,8 @@ td,th{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ---- fill these in from your Supabase project (Settings → API) ----
-const SUPABASE_URL = "https://yzsquxlhxllculklabhu.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_HS9_fL95YmkF4cldBuIAXA_5nzmnAU-";
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function getCode(){
@@ -66,10 +79,13 @@ function changeSyncCode(){
   if(v && v.trim()){ localStorage.setItem('ic_sync_code',v.trim().toUpperCase()); location.reload(); }
 }
 
-let personas=[]; let tab='setup';
+let personas=[]; let tab='setup'; let editingPersonaId=null;
 let iv={active:false,persona:null,turns:[],qn:0,max:5,pending:null};
 let rec={active:false,ctx:null,stream:null,analyser:null,recog:null,final:'',interim:'',vol:[],pitch:[],loopId:null,start:0};
 const MAXQ=5;
+let voiceOn = localStorage.getItem('ic_voice_on')==='1';
+let voiceName = localStorage.getItem('ic_voice_name') || 'en-US-GuyNeural';
+
 function profiles(){ try{ return JSON.parse(localStorage.getItem('ic_profiles')||'[{"id":"me","label":"Me"}]'); }catch(e){ return [{id:'me',label:'Me'}]; } }
 function setProfiles(p){ try{ localStorage.setItem('ic_profiles',JSON.stringify(p)); }catch(e){} }
 function activeProfile(){ try{ return localStorage.getItem('ic_active')||'me'; }catch(e){ return 'me'; } }
@@ -86,13 +102,43 @@ function renderProfileSel(){
 }
 document.getElementById('profileSel').onchange=e=>{setActive(e.target.value); render();};
 
+function toggleVoice(){
+  voiceOn=!voiceOn; localStorage.setItem('ic_voice_on', voiceOn?'1':'0');
+  document.getElementById('voiceBtn').textContent = voiceOn?'🔊 On':'🔊 Off';
+}
+function setVoiceName(v){ voiceName=v; localStorage.setItem('ic_voice_name', v); }
+async function speak(text){
+  if(!voiceOn || !text) return;
+  try{
+    const r=await fetch('/api/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text.slice(0,600),voice:voiceName})});
+    if(!r.ok) return;
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const audio=new Audio(url);
+    audio.play().catch(()=>{});
+  }catch(e){}
+}
+
 // ---------- ask Claude via serverless proxy ----------
-async function askClaude(input, wantJson){
-  const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,json:!!wantJson})});
+async function askClaude(input, wantJson, useSearch){
+  const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,json:!!wantJson,search:!!useSearch})});
   const data=await r.json();
   if(!r.ok) throw new Error(typeof data.error==='string'?data.error:JSON.stringify(data.error));
   return wantJson ? data : {text:data.text};
 }
+async function fetchRecommendations(x, useSearch){
+  const prompt=`Give 3 short, concrete recommendations to improve this candidate's interview performance.
+Metrics — pace ${x.wpm} wpm, fillers ${x.fillers}, pauses ${x.pauseCount||0} (${x.pauseSec||0}s total), pitch variation ${x.pVar}Hz.
+Summary: ${x.summary||''}
+Noted improvements: ${(x.improvements||[]).join('; ')}
+${x.transcript?'Transcript:\n'+x.transcript.slice(0,3000):''}
+Keep it practical and specific to this person's answers, not generic advice.`;
+  const r=await askClaude(prompt,false,useSearch);
+  x.recommendations=r.text;
+  if(x._rowId){ try{ await supa.from('sessions').update({data:x}).eq('id',x._rowId); }catch(e){} }
+  return x.recommendations;
+}
+
 function buildNav(){
   const tabs=[["setup","Setup"],["interview","Interview"],["audio","Audio Analysis"],["dashboard","Dashboard"],["compare","Compare"]];
   document.getElementById('nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
@@ -101,27 +147,53 @@ async function go(t){tab=t;buildNav();await render();}
 
 async function loadPersonas(){
   const {data,error}=await supa.from('personas').select('*').eq('sync_code',getCode()).order('created_at',{ascending:false});
-  personas = error||!data ? [] : data.map(r=>({id:r.id,company:r.company,role:r.role,jdText:r.jd_text,label:r.label}));
+  personas = error||!data ? [] : data.map(r=>({id:r.id,company:r.company,role:r.role,jdText:r.jd_text,label:r.label,toughness:r.toughness||'realistic'}));
 }
 async function savePersona(){
   const company=document.getElementById('p-company').value.trim();
   const role=document.getElementById('p-role').value.trim();
+  const toughness=document.getElementById('p-tough').value;
   const jdText=document.getElementById('p-jd').value.trim();
   if(!role){alert("Add at least a role.");return;}
-  await supa.from('personas').insert({sync_code:getCode(),company,role,jd_text:jdText.slice(0,6000),label:(company?company+" — ":"")+role});
+  const label=(company?company+" — ":"")+role;
+  if(editingPersonaId){
+    await supa.from('personas').update({company,role,jd_text:jdText.slice(0,6000),label,toughness}).eq('id',editingPersonaId);
+    editingPersonaId=null;
+  }else{
+    await supa.from('personas').insert({sync_code:getCode(),company,role,jd_text:jdText.slice(0,6000),label,toughness});
+  }
+  await loadPersonas(); render();
+}
+function editPersona(id){ editingPersonaId=id; render(); }
+async function deletePersona(id){
+  if(!confirm('Delete this persona?')) return;
+  await supa.from('personas').delete().eq('id',id);
   await loadPersonas(); render();
 }
 function renderSetup(){
+  const editing=personas.find(p=>p.id===editingPersonaId);
   document.getElementById('main').innerHTML=`
-  <div class="card"><h3>Create an interviewer persona</h3>
-  <label>Company (optional)</label><input id="p-company" placeholder="e.g. Bayara">
-  <label>Role</label><input id="p-role" placeholder="e.g. B2B Sales Development Rep">
-  <label>Paste job description (optional — the more detail, the sharper the questions)</label>
-  <textarea id="p-jd"></textarea>
-  <div class="row" style="margin-top:10px"><button onclick="savePersona()">Save persona</button></div>
+  <div class="card"><h3>${editing?'Edit':'Create'} an interviewer persona</h3>
+  <label>Company (optional)</label><input id="p-company" value="${editing?editing.company||'':''}" placeholder="e.g. Bayara">
+  <label>Role</label><input id="p-role" value="${editing?editing.role||'':''}" placeholder="e.g. B2B Sales Development Rep">
+  <label>Interview toughness</label>
+  <select id="p-tough">
+    <option value="gentle" ${editing&&editing.toughness==='gentle'?'selected':''}>Gentle — HR / warm-up rounds</option>
+    <option value="realistic" ${!editing||editing.toughness==='realistic'?'selected':''}>Realistic — standard panel interviewer</option>
+    <option value="tough" ${editing&&editing.toughness==='tough'?'selected':''}>Tough — high-pressure round</option>
+  </select>
+  <label>Paste job description / round notes (optional)</label>
+  <textarea id="p-jd">${editing?editing.jdText||'':''}</textarea>
+  <div class="row" style="margin-top:10px">
+  <button onclick="savePersona()">${editing?'Update':'Save'} persona</button>
+  ${editing?'<button class="sec" onclick="editingPersonaId=null;render()">Cancel</button>':''}
+  </div>
   </div>
   <div class="card"><h3>Saved personas</h3>
-  ${personas.length?personas.map(p=>`<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${p.label}</span></div>`).join(''):'<p class="hint">None yet.</p>'}
+  ${personas.length?personas.map(p=>`<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+    <span>${p.label} <span class="pill">${p.toughness}</span></span>
+    <span class="row"><button class="sec" onclick="editPersona('${p.id}')">Edit</button><button class="sec" onclick="deletePersona('${p.id}')">Delete</button></span>
+  </div>`).join(''):'<p class="hint">None yet.</p>'}
   </div>`;
 }
 
@@ -184,7 +256,13 @@ function stopCapture(){
   const avgVol=rec.vol.length?rec.vol.reduce((a,b)=>a+b,0)/rec.vol.length:0;
   const pMean=rec.pitch.length?rec.pitch.reduce((a,b)=>a+b,0)/rec.pitch.length:0;
   const pVar=rec.pitch.length>1?Math.sqrt(rec.pitch.reduce((a,b)=>a+(b-pMean)**2,0)/rec.pitch.length):0;
-  return {transcript,durationSec:Math.round(durationSec),wordCount:words.length,wpm:isFinite(wpm)?wpm:0,fillers,avgVol,pMean:Math.round(pMean),pVar:Math.round(pVar)};
+  let pauseCount=0,pauseSec=0,silentRun=0;
+  rec.vol.forEach(v=>{
+    if(v<0.015){ silentRun++; }
+    else { if(silentRun>=12){ pauseCount++; pauseSec+=silentRun*0.1; } silentRun=0; }
+  });
+  if(silentRun>=12){ pauseCount++; pauseSec+=silentRun*0.1; }
+  return {transcript,durationSec:Math.round(durationSec),wordCount:words.length,wpm:isFinite(wpm)?wpm:0,fillers,avgVol,pMean:Math.round(pMean),pVar:Math.round(pVar),pauseCount,pauseSec:Math.round(pauseSec)};
 }
 function scoreMetrics(m){
   const pace=Math.max(0,100-Math.abs(m.wpm-135)*1.2);
@@ -196,9 +274,14 @@ function scoreMetrics(m){
 
 // ---------- mock interview ----------
 function buildRules(p){
+  const tone={
+    gentle:"Tone: warm, encouraging, and gentle — like a supportive HR person putting the candidate at ease. Acknowledge good answers briefly before moving on. Never sound interrogating or skeptical.",
+    realistic:"Tone: professional and neutral, like a real hiring manager — courteous but not overly warm. Don't praise every answer; only briefly acknowledge genuinely strong points. Push for specifics when an answer is vague ('Can you give me a concrete example?').",
+    tough:"Tone: rigorous and a bit challenging, like a senior panel interviewer under time pressure. Rarely offer praise. Use sharp follow-ups on weak or vague answers ('That doesn't fully answer my question', 'Be more specific'). Maintain pressure without being rude."
+  }[p.toughness||'realistic'];
   return `You are role-playing as an experienced human interviewer/recruiter for the role of ${p.role} ${p.company?"at "+p.company:""}.
-${p.jdText?"Job description:\n"+p.jdText+"\n":""}
-Conduct a realistic interview. Ask ONE question per turn (behavioral/STAR, role-specific, or situational — whatever a real recruiter for this role would ask). If an answer is vague, ask a sharp natural follow-up instead of moving on. Output ONLY the question text, no preamble, no numbering, no meta-commentary.`;
+${p.jdText?"Job description / round notes:\n"+p.jdText+"\n":""}
+Conduct a realistic interview. Ask ONE question per turn (behavioral/STAR, role-specific, or situational — whatever a real recruiter for this role would ask). If an answer is vague, ask a sharp natural follow-up instead of moving on. ${tone} Output ONLY the question text, no preamble, no numbering, no meta-commentary.`;
 }
 async function beginInterview(personaId){
   const p=personas.find(x=>x.id===personaId); if(!p) return;
@@ -211,7 +294,8 @@ async function askQuestion(){
     const r=await askClaude(iv.turns);
     iv.turns.push({role:"assistant",content:r.text});
     iv.qn++;
-    }catch(e){ iv.error="Claude error: "+e.message; }
+    speak(r.text);
+  }catch(e){ iv.error="Claude error: "+e.message; }
   renderInterview();
 }
 async function toggleRecord(cb){
@@ -229,24 +313,33 @@ async function submitAnswer(){
 }
 async function finishInterview(){
   document.getElementById('main').innerHTML='<div class="card">Scoring your interview…</div>';
-  const transcript=iv.turns.map(t=>(t.role==='assistant'?'Q: ':'A: ')+t.content).join('\n');
+  const transcript=iv.turns.slice(1).map(t=>(t.role==='assistant'?'Interviewer: ':'You: ')+t.content).join('\n\n');
   const agg=aggregate(iv.lastMetrics||[]);
   let fb={overallScore:60,contentScore:60,structureScore:60,confidenceScore:60,strengths:[],improvements:[],summary:""};
   try{
     fb=await askClaude(`You are an expert interview coach. Here is a full interview transcript:\n${transcript.slice(0,8000)}\n\nGive JSON only: {"overallScore":0-100,"contentScore":0-100,"structureScore":0-100,"confidenceScore":0-100,"strengths":[3 short strings],"improvements":[3 short strings],"summary":"2 sentence summary"}`,true);
   }catch(e){}
   const scores=scoreMetrics(agg);
-  const session={kind:"interview",profile:activeProfile(),profileLabel:profiles().find(x=>x.id===activeProfile())?.label||activeProfile(),personaLabel:iv.persona.label,createdAt:new Date().toISOString(),...agg,...scores,...fb};
-  await supa.from('sessions').insert({sync_code:getCode(),kind:session.kind,profile:session.profile,data:session});
+  const session={kind:"interview",profile:activeProfile(),profileLabel:profiles().find(x=>x.id===activeProfile())?.label||activeProfile(),personaLabel:iv.persona.label,createdAt:new Date().toISOString(),transcript,...agg,...scores,...fb};
+  try{
+    const {data}=await supa.from('sessions').insert({sync_code:getCode(),kind:session.kind,profile:session.profile,data:session}).select().single();
+    if(data) session._rowId=data.id;
+  }catch(e){}
   iv.active=false; iv.result=session;
   renderInterview();
 }
 function aggregate(list){
-  if(!list.length) return {wpm:0,fillers:0,wordCount:0,pVar:0,avgVol:0,durationSec:0};
-  const s={wpm:0,fillers:0,wordCount:0,pVar:0,avgVol:0,durationSec:0};
-  list.forEach(m=>{s.wpm+=m.wpm;s.fillers+=m.fillers;s.wordCount+=m.wordCount;s.pVar+=m.pVar;s.avgVol+=m.avgVol;s.durationSec+=m.durationSec;});
+  if(!list.length) return {wpm:0,fillers:0,wordCount:0,pVar:0,avgVol:0,durationSec:0,pauseCount:0,pauseSec:0};
+  const s={wpm:0,fillers:0,wordCount:0,pVar:0,avgVol:0,durationSec:0,pauseCount:0,pauseSec:0};
+  list.forEach(m=>{s.wpm+=m.wpm;s.fillers+=m.fillers;s.wordCount+=m.wordCount;s.pVar+=m.pVar;s.avgVol+=m.avgVol;s.durationSec+=m.durationSec;s.pauseCount+=m.pauseCount||0;s.pauseSec+=m.pauseSec||0;});
   s.wpm=Math.round(s.wpm/list.length); s.pVar=Math.round(s.pVar/list.length); s.avgVol=s.avgVol/list.length;
   return s;
+}
+async function ivGetRec(){
+  const box=document.getElementById('iv-rec'); box.textContent='Thinking…';
+  const useSearch=document.getElementById('iv-srch').checked;
+  try{ await fetchRecommendations(iv.result, useSearch); }catch(e){ iv.result.recommendations='Could not fetch recommendations — try again.'; }
+  renderInterview();
 }
 function renderInterview(thinking){
   const el=document.getElementById('main');
@@ -254,16 +347,23 @@ function renderInterview(thinking){
     const r=iv.result;
     el.innerHTML=`<div class="card"><h3>Interview complete — ${r.personaLabel}</h3>
     <div class="metric">Overall ${r.overallScore}/100</div><div class="metric">Content ${r.contentScore}/100</div><div class="metric">Structure ${r.structureScore}/100</div><div class="metric">Confidence ${r.confidenceScore}/100</div>
-    <div class="metric">Pace ${r.wpm} wpm</div><div class="metric">Fillers ${r.fillers}</div><div class="metric">Pitch variation ${r.pVar}Hz</div>
+    <div class="metric">Pace ${r.wpm} wpm</div><div class="metric">Fillers ${r.fillers}</div><div class="metric">Pauses ${r.pauseCount} (${r.pauseSec}s)</div><div class="metric">Pitch variation ${r.pVar}Hz</div>
     <p>${r.summary||''}</p>
     <b>Strengths</b><ul>${(r.strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
     <b>Improve</b><ul>${(r.improvements||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
-    <button onclick="iv={active:false,turns:[],qn:0};tab='interview';render()">New interview</button></div>`;
+    <details><summary class="hint">View transcript</summary><pre>${r.transcript||''}</pre></details>
+    ${r.recommendations?`<b>Recommendations</b><p>${r.recommendations}</p>`:`
+    <div class="row" style="margin-top:10px">
+      <label class="hint"><input type="checkbox" id="iv-srch"> search the web (adds ~1-2¢)</label>
+      <button class="sec" onclick="ivGetRec()">Get recommendations</button>
+    </div><div id="iv-rec" class="hint" style="margin-top:6px"></div>`}
+    <div class="row" style="margin-top:12px"><button onclick="iv={active:false,turns:[],qn:0};tab='interview';render()">New interview</button></div>
+    </div>`;
     return;
   }
   if(!iv.active){
     el.innerHTML=`<div class="card"><h3>Start a mock interview</h3>
-    ${personas.length?`<select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}</select><div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value)">Start</button></div>`:'<p class="hint">Create a persona in Setup first.</p>'}
+    ${personas.length?`<select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${p.toughness})</option>`).join('')}</select><div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value)">Start</button></div>`:'<p class="hint">Create a persona in Setup first.</p>'}
     </div>`;
     return;
   }
@@ -279,13 +379,26 @@ function renderInterview(thinking){
 
 // ---------- standalone audio analysis ----------
 let aa={active:false,topic:''};
+async function aaGetRec(){
+  const box=document.getElementById('aa-rec'); box.textContent='Thinking…';
+  const useSearch=document.getElementById('aa-srch').checked;
+  try{ await fetchRecommendations(aa.result, useSearch); }catch(e){ aa.result.recommendations='Could not fetch recommendations — try again.'; }
+  renderAudio();
+}
 function renderAudio(){
   const el=document.getElementById('main');
   if(aa.result){
     const r=aa.result;
     el.innerHTML=`<div class="card"><h3>Analysis — ${r.topic}</h3>
-    <div class="metric">Overall ${r.overallScore}/100</div><div class="metric">Pace ${r.wpm} wpm</div><div class="metric">Fillers ${r.fillers}</div><div class="metric">Pitch variation ${r.pVar}Hz</div><div class="metric">Duration ${r.durationSec}s</div>
-    <p>${r.summary||''}</p><button onclick="aa={active:false,topic:''};render()">New recording</button></div>`;
+    <div class="metric">Overall ${r.overallScore}/100</div><div class="metric">Pace ${r.wpm} wpm</div><div class="metric">Fillers ${r.fillers}</div><div class="metric">Pauses ${r.pauseCount} (${r.pauseSec}s)</div><div class="metric">Pitch variation ${r.pVar}Hz</div><div class="metric">Duration ${r.durationSec}s</div>
+    <p>${r.summary||''}</p>
+    <details><summary class="hint">View transcript</summary><pre>${r.transcript||''}</pre></details>
+    ${r.recommendations?`<b>Recommendations</b><p>${r.recommendations}</p>`:`
+    <div class="row" style="margin-top:10px">
+      <label class="hint"><input type="checkbox" id="aa-srch"> search the web (adds ~1-2¢)</label>
+      <button class="sec" onclick="aaGetRec()">Get recommendations</button>
+    </div><div id="aa-rec" class="hint" style="margin-top:6px"></div>`}
+    <div class="row" style="margin-top:12px"><button onclick="aa={active:false,topic:''};render()">New recording</button></div></div>`;
     return;
   }
   el.innerHTML=`<div class="card"><h3>Speak on a topic</h3>
@@ -298,6 +411,7 @@ function renderAudio(){
 async function aaToggle(){
   if(!rec.active){
     aa.topic=document.getElementById('aa-topic').value.trim()||'General topic';
+    if(voiceOn) speak(aa.topic);
     await startCapture(t=>{const el=document.getElementById('live-t'); if(el) el.textContent=t;});
     document.getElementById('rec-dot').style.display='inline-block';
     renderAudio();
@@ -310,31 +424,93 @@ async function aaToggle(){
     }catch(e){}
     const scores=scoreMetrics(m);
     const session={kind:"audio_analysis",profile:activeProfile(),profileLabel:profiles().find(x=>x.id===activeProfile())?.label||activeProfile(),topic:aa.topic,createdAt:new Date().toISOString(),...m,...scores,...fb};
-    delete session.transcript;
-    await supa.from('sessions').insert({sync_code:getCode(),kind:session.kind,profile:session.profile,data:session});
+    try{
+      const {data}=await supa.from('sessions').insert({sync_code:getCode(),kind:session.kind,profile:session.profile,data:session}).select().single();
+      if(data) session._rowId=data.id;
+    }catch(e){}
     aa.result=session; renderAudio();
   }
 }
 
 // ---------- dashboard ----------
+let dashSessions=[];
 async function loadSessions(profileId){
   const {data,error}=await supa.from('sessions').select('*').eq('sync_code',getCode()).eq('profile',profileId).order('created_at',{ascending:false}).limit(50);
-  return error||!data ? [] : data.map(r=>r.data);
+  return error||!data ? [] : data.map(r=>({...r.data,_rowId:r.id}));
+}
+function sparkline(vals,color){
+  if(vals.length<2) return '<p class="hint">Need more sessions for a trend.</p>';
+  const max=Math.max(...vals,1), min=Math.min(...vals,0), w=260, h=44;
+  const pts=vals.map((v,i)=>`${(i/(vals.length-1))*w},${h-((v-min)/((max-min)||1))*h}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:44px"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5"/></svg>`;
+}
+function renderSessionRow(x,i){
+  return `<div class="sess-row">
+    <div class="row" style="justify-content:space-between;cursor:pointer" onclick="toggleDetail(${i})">
+      <span>${new Date(x.createdAt).toLocaleDateString()} — ${x.kind==='interview'?x.personaLabel:x.topic}</span>
+      <span class="pill">${x.overallScore}/100</span>
+    </div>
+    <div id="detail-${i}" style="display:none;margin-top:10px">
+      ${x.kind==='interview'?`<div class="metric">Content ${x.contentScore}/100</div><div class="metric">Structure ${x.structureScore}/100</div><div class="metric">Confidence ${x.confidenceScore}/100</div>`:''}
+      <div class="metric">Pace ${x.wpm} wpm</div><div class="metric">Fillers ${x.fillers}</div><div class="metric">Pauses ${x.pauseCount||0} (${x.pauseSec||0}s)</div><div class="metric">Pitch var ${x.pVar}Hz</div>
+      <p>${x.summary||''}</p>
+      ${(x.strengths&&x.strengths.length)?`<b>Strengths</b><ul>${x.strengths.map(s=>`<li>${s}</li>`).join('')}</ul>`:''}
+      ${(x.improvements&&x.improvements.length)?`<b>Improve</b><ul>${x.improvements.map(s=>`<li>${s}</li>`).join('')}</ul>`:''}
+      ${x.transcript?`<details><summary class="hint">View transcript</summary><pre>${x.transcript}</pre></details>`:''}
+      ${x.recommendations?`<b>Recommendations</b><p>${x.recommendations}</p>`:`
+      <div class="row" style="margin-top:8px">
+      <label class="hint"><input type="checkbox" id="srch-${i}"> search web</label>
+      <button class="sec" onclick="dashGetRec(${i})">Get recommendations</button>
+      </div>`}
+    </div>
+  </div>`;
+}
+function toggleDetail(i){ const el=document.getElementById('detail-'+i); el.style.display=el.style.display==='none'?'block':'none'; }
+async function dashGetRec(i){
+  const x=dashSessions[i];
+  const useSearch=document.getElementById('srch-'+i).checked;
+  try{ await fetchRecommendations(x, useSearch); }catch(e){}
+  await renderDashboard();
 }
 async function renderDashboard(){
   const el=document.getElementById('main');
   el.innerHTML='<div class="card">Loading…</div>';
-  const sessions=await loadSessions(activeProfile());
-  if(!sessions.length){ el.innerHTML='<div class="card">No sessions yet for this profile — do a mock interview or audio analysis first.</div>'; return; }
-  const avg=k=>Math.round(sessions.reduce((a,s)=>a+(s[k]||0),0)/sessions.length);
-  const recent=sessions.slice(0,10).reverse();
-  el.innerHTML=`<div class="card"><h3>Averages (${sessions.length} sessions)</h3>
-  <div class="metric">Overall ${avg('overallScore')}/100</div><div class="metric">Pace ${avg('wpm')} wpm</div><div class="metric">Fillers ${avg('fillers')}</div><div class="metric">Pitch var ${avg('pVar')}Hz</div>
-  <div class="bar-wrap">${recent.map(s=>`<div class="bar" style="height:${Math.max(2,s.overallScore||0)}%" title="${s.overallScore}"></div>`).join('')}</div>
-  <p class="hint">Last ${recent.length} sessions, overall score</p></div>
-  <div class="card"><h3>History</h3><table><tr><th>Date</th><th>Type</th><th>Score</th><th>WPM</th></tr>
-  ${sessions.map(s=>`<tr><td>${new Date(s.createdAt).toLocaleDateString()}</td><td>${s.kind==='interview'?s.personaLabel:s.topic}</td><td>${s.overallScore}</td><td>${s.wpm}</td></tr>`).join('')}
-  </table></div>`;
+  const s=await loadSessions(activeProfile());
+  dashSessions=s;
+  if(!s.length){ el.innerHTML='<div class="card">No sessions yet for this profile — do a mock interview or audio analysis first.</div>'; return; }
+  const avg=k=>Math.round(s.reduce((a,x)=>a+(x[k]||0),0)/s.length);
+  const chrono=s.slice().reverse();
+  const allImprove=s.flatMap(x=>x.improvements||[]).map(t=>t.trim());
+  const freq={}; allImprove.forEach(t=>{const k=t.toLowerCase(); freq[k]=freq[k]?{c:freq[k].c+1,t}:{c:1,t};});
+  const themes=Object.values(freq).filter(v=>v.c>1).sort((a,b)=>b.c-a.c).slice(0,3);
+  const qTypes={Behavioral:0,Situational:0,'Background/Fit':0,Other:0};
+  s.filter(x=>x.kind==='interview'&&x.transcript).forEach(x=>{
+    x.transcript.split('\n\n').forEach(line=>{
+      if(!line.startsWith('Interviewer:')) return;
+      const q=line.toLowerCase();
+      if(/tell me about a time|describe a situation|give.*example/.test(q)) qTypes.Behavioral++;
+      else if(/what would you do|how would you handle|imagine/.test(q)) qTypes.Situational++;
+      else if(/why|yourself|strength|weakness|career|salary|available/.test(q)) qTypes['Background/Fit']++;
+      else qTypes.Other++;
+    });
+  });
+  const days=[...new Set(s.map(x=>new Date(x.createdAt).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
+  let streak=0,cur=new Date();
+  for(let i=0;i<days.length;i++){ const d=new Date(days[i]); const diff=Math.round((cur-d)/86400000); if(diff<=streak+1){ streak++; cur=d; } else break; }
+  const weekCount=s.filter(x=>(Date.now()-new Date(x.createdAt))<7*86400000).length;
+  el.innerHTML=`<div class="card"><h3>Averages (${s.length} sessions)</h3>
+  <div class="metric">Overall ${avg('overallScore')}/100</div>
+  <div class="metric">Pace ${avg('wpm')} wpm <span class="hint">(ideal 120–150)</span></div>
+  <div class="metric">Fillers ${avg('fillers')}</div>
+  <div class="metric">Pitch var ${avg('pVar')}Hz <span class="hint">(ideal 15–70)</span></div>
+  <div class="metric">Pauses ${avg('pauseCount')} (~${avg('pauseSec')}s)</div>
+  <div class="metric">🔥 ${streak}-day streak</div>
+  <div class="metric">${weekCount} this week</div></div>
+  <div class="card"><h3>Trend — overall score</h3>${sparkline(chrono.map(x=>x.overallScore||0),'var(--accent)')}</div>
+  <div class="card"><h3>Trend — filler rate %</h3>${sparkline(chrono.map(x=>x.fillerRate||0),'var(--danger)')}</div>
+  ${themes.length?`<div class="card"><h3>Recurring feedback themes</h3><ul>${themes.map(v=>`<li>${v.t} <span class="hint">(${v.c}x)</span></li>`).join('')}</ul></div>`:''}
+  <div class="card"><h3>Question types practiced</h3>${Object.entries(qTypes).map(([k,v])=>`<div class="metric">${k} ${v}</div>`).join('')}</div>
+  <div class="card"><h3>History</h3>${s.map((x,i)=>renderSessionRow(x,i)).join('')}</div>`;
 }
 
 // ---------- compare ----------
@@ -350,7 +526,7 @@ async function runCompare(){
   const a=document.getElementById('cpA').value, b=document.getElementById('cpB').value;
   const [sa,sb]=await Promise.all([loadSessions(a),loadSessions(b)]);
   const avg=(arr,k)=>arr.length?Math.round(arr.reduce((s,x)=>s+(x[k]||0),0)/arr.length):0;
-  const rows=[["Sessions",sa.length,sb.length],["Overall score",avg(sa,'overallScore'),avg(sb,'overallScore')],["Pace (wpm)",avg(sa,'wpm'),avg(sb,'wpm')],["Fillers",avg(sa,'fillers'),avg(sb,'fillers')],["Pitch variation",avg(sa,'pVar'),avg(sb,'pVar')]];
+  const rows=[["Sessions",sa.length,sb.length],["Overall score",avg(sa,'overallScore'),avg(sb,'overallScore')],["Pace (wpm)",avg(sa,'wpm'),avg(sb,'wpm')],["Fillers",avg(sa,'fillers'),avg(sb,'fillers')],["Pauses",avg(sa,'pauseCount'),avg(sb,'pauseCount')],["Pitch variation",avg(sa,'pVar'),avg(sb,'pVar')]];
   const la=profiles().find(x=>x.id===a)?.label||a, lb=profiles().find(x=>x.id===b)?.label||b;
   document.getElementById('cp-out').innerHTML=`<table><tr><th></th><th>${la}</th><th>${lb}</th></tr>
   ${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</table>`;
@@ -365,6 +541,8 @@ async function render(){
 }
 async function init(){
   document.getElementById('syncPill').textContent='Sync: '+getCode();
+  document.getElementById('voiceBtn').textContent = voiceOn?'🔊 On':'🔊 Off';
+  document.getElementById('voiceSel').value = voiceName;
   renderProfileSel(); buildNav(); await loadPersonas(); await render();
 }
 init();
