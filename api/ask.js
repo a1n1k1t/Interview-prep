@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Not signed in' });
   const { data: userData, error: userErr } = await admin.auth.getUser(token);
-  if (userErr || !userData?.user) return res.status(401).json({ error: 'Invalid session — sign in again' });
+  if (userErr || !userData?.user) return res.status(401).json({ error: 'Invalid session: ' + (userErr?.message || 'no user') });
   const uid = userData.user.id;
 
   const { input, json, search, saveGrowthAreas } = req.body || {};
