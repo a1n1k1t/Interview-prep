@@ -636,25 +636,56 @@ async function renderHistory(){
   <div class="card"><h3>Session log</h3>${s.map((x,i)=>renderSessionRow(x,i)).join('')}</div>`;
 }
 
-// ---------- Reads (plain PDF viewer, no AI summary) ----------
-function showPdf(inputId, viewId){
-  const file=document.getElementById(inputId).files[0];
-  if(!file) return;
-  const url=URL.createObjectURL(file);
-  document.getElementById(viewId).innerHTML=`<iframe src="${url}" style="width:100%;height:600px;border:1px solid var(--border);border-radius:8px"></iframe>`;
+// ---------- Reads (admin-uploaded shared library — students read-only) ----------
+async function loadReads(kind){
+  const {data,error}=await supa.from('reads').select('*').eq('kind',kind).order('created_at',{ascending:false}).limit(30);
+  return error||!data?[]:data;
 }
-function renderReads(){
-  document.getElementById('main').innerHTML=`
-  <div class="card"><h3>Report Summary</h3>
-  <p class="hint">Upload a PDF to read it here — this just displays it, no AI summary.</p>
-  <input type="file" id="rd-report" accept="application/pdf" onchange="showPdf('rd-report','rd-report-view')">
-  <div id="rd-report-view" style="margin-top:10px"></div>
-  </div>
-  <div class="card"><h3>Newspaper (Economic Times)</h3>
-  <p class="hint">Upload today's paper to read it here.</p>
-  <input type="file" id="rd-news" accept="application/pdf" onchange="showPdf('rd-news','rd-news-view')">
-  <div id="rd-news-view" style="margin-top:10px"></div>
+function readUrl(path){ return supa.storage.from('reads').getPublicUrl(path).data.publicUrl; }
+async function uploadRead(kind, inputId, titleId){
+  const file=document.getElementById(inputId).files[0];
+  if(!file){ alert('Choose a PDF first.'); return; }
+  const title=document.getElementById(titleId).value.trim()||file.name;
+  const path=`${kind}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+  const {error:upErr}=await supa.storage.from('reads').upload(path,file,{contentType:'application/pdf'});
+  if(upErr){ alert('Upload failed: '+upErr.message); return; }
+  const {error:insErr}=await supa.from('reads').insert({kind,title,storage_path:path,uploaded_by:currentUser.id});
+  if(insErr){ alert('File uploaded but could not be listed: '+insErr.message); return; }
+  await go('reads');
+}
+async function deleteRead(id, path){
+  if(!confirm('Delete this for everyone?')) return;
+  await supa.storage.from('reads').remove([path]);
+  await supa.from('reads').delete().eq('id',id);
+  await go('reads');
+}
+function viewRead(path, viewId){
+  document.getElementById(viewId).innerHTML=`<iframe src="${readUrl(path)}" style="width:100%;height:600px;border:1px solid var(--border);border-radius:8px"></iframe>`;
+}
+function renderReadSection(title, kind, items){
+  const isAdmin=myProfile.is_admin;
+  return `<div class="card"><h3>${title}</h3>
+  ${isAdmin?`<div class="row" style="margin-bottom:10px">
+  <input type="text" id="title-${kind}" placeholder="Title (optional)" style="flex:2;min-width:140px">
+  <input type="file" id="file-${kind}" accept="application/pdf" style="flex:2;min-width:160px">
+  <button onclick="uploadRead('${kind}','file-${kind}','title-${kind}')">Upload</button>
+  </div>`:''}
+  ${items.length?items.map((r,i)=>`
+  <div class="sess-row">
+    <div class="row" style="justify-content:space-between">
+      <span style="cursor:pointer" onclick="viewRead('${r.storage_path}','view-${kind}-${i}')">📄 ${r.title} <span class="hint">(${new Date(r.created_at).toLocaleDateString()})</span></span>
+      ${isAdmin?`<button class="sec" onclick="deleteRead('${r.id}','${r.storage_path}')">Delete</button>`:''}
+    </div>
+    <div id="view-${kind}-${i}" style="margin-top:8px"></div>
+  </div>`).join(''):`<p class="hint">Nothing uploaded yet${isAdmin?' — add one above.':', check back later.'}</p>`}
   </div>`;
+}
+async function renderReads(){
+  document.getElementById('main').innerHTML='<div class="card">Loading…</div>';
+  const [reports,newspapers]=await Promise.all([loadReads('report'),loadReads('newspaper')]);
+  document.getElementById('main').innerHTML =
+    renderReadSection('Report Summary','report',reports) +
+    renderReadSection('Newspaper (Economic Times)','newspaper',newspapers);
 }
 function renderSHL(){
   document.getElementById('main').innerHTML=`<div class="card"><h3>SHL Report Analysis</h3><div class="stub">Upload your SHL assessment PDF for a full breakdown and areas to work on.<br><b>Coming soon.</b></div></div>`;
@@ -688,7 +719,7 @@ async function render(){
   else if(tab==='audio') renderAudio();
   else if(tab==='bank') renderBank();
   else if(tab==='history') await renderHistory();
-  else if(tab==='reads') renderReads();
+  else if(tab==='reads') await renderReads();
   else if(tab==='shl') renderSHL();
   else if(tab==='admin') await renderAdmin();
 }
