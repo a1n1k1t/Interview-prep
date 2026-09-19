@@ -601,11 +601,25 @@ async function renderHistory(){
   <div class="card"><h3>Session log</h3>${s.map((x,i)=>renderSessionRow(x,i)).join('')}</div>`;
 }
 
-// ---------- stubs ----------
+// ---------- Reads (plain PDF viewer, no AI summary) ----------
+function showPdf(inputId, viewId){
+  const file=document.getElementById(inputId).files[0];
+  if(!file) return;
+  const url=URL.createObjectURL(file);
+  document.getElementById(viewId).innerHTML=`<iframe src="${url}" style="width:100%;height:600px;border:1px solid var(--border);border-radius:8px"></iframe>`;
+}
 function renderReads(){
   document.getElementById('main').innerHTML=`
-  <div class="card"><h3>Report Summary</h3><div class="stub">Upload a report PDF and get an AI summary.<br><b>Coming soon.</b></div></div>
-  <div class="card"><h3>Newspaper (Economic Times)</h3><div class="stub">Upload today's paper and get key points for interview GK.<br><b>Coming soon.</b></div></div>`;
+  <div class="card"><h3>Report Summary</h3>
+  <p class="hint">Upload a PDF to read it here — this just displays it, no AI summary.</p>
+  <input type="file" id="rd-report" accept="application/pdf" onchange="showPdf('rd-report','rd-report-view')">
+  <div id="rd-report-view" style="margin-top:10px"></div>
+  </div>
+  <div class="card"><h3>Newspaper (Economic Times)</h3>
+  <p class="hint">Upload today's paper to read it here.</p>
+  <input type="file" id="rd-news" accept="application/pdf" onchange="showPdf('rd-news','rd-news-view')">
+  <div id="rd-news-view" style="margin-top:10px"></div>
+  </div>`;
 }
 function renderSHL(){
   document.getElementById('main').innerHTML=`<div class="card"><h3>SHL Report Analysis</h3><div class="stub">Upload your SHL assessment PDF for a full breakdown and areas to work on.<br><b>Coming soon.</b></div></div>`;
