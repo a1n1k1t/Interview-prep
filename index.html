@@ -352,7 +352,8 @@ async function startCapture(onTranscript){
     rec.vol.push(rms); if(pitch>0) rec.pitch.push(pitch);
   },100);
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(SR){
+  const isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(SR && !isMobile){
     rec.recog=new SR(); rec.recog.continuous=true; rec.recog.interimResults=true; rec.recog.lang='en-US';
     rec.recog.onresult=(e)=>{
       let inter='';
@@ -370,7 +371,7 @@ async function startCapture(onTranscript){
     rec.mediaRecorder=new MediaRecorder(rec.stream, mt?{mimeType:mt}:undefined);
     rec.mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) rec.chunks.push(e.data); };
     rec.mediaRecorder.start();
-    onTranscript && onTranscript('(recording — will transcribe on-device after you stop, first time takes longer)');
+    onTranscript && onTranscript('(recording — will transcribe on-device after you stop; first time on this phone takes longer while it downloads a small model)');
   }
 }
 async function stopCapture(){
