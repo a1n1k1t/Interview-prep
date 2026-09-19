@@ -5,21 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>InterviewIQ</title>
 <style>
-:root{--bg:#f6f7fb;--panel:#fff;--text:#161622;--muted:#6b7280;--border:#e7e8f0;--accent:#6d5bf7;--accent2:#16a34a;--warn:#d97706;--danger:#dc2626;--radius:14px;--shadow:0 1px 3px rgba(20,20,40,.06),0 1px 2px rgba(20,20,40,.04);}
+:root{--bg:#f7f8fc;--panel:#fff;--text:#151521;--muted:#6b7280;--border:#e8e9f1;--accent:#5b45e8;--accent-soft:#eeebff;--accent2:#16a34a;--warn:#d97706;--danger:#dc2626;--radius:14px;--shadow:0 1px 3px rgba(20,20,40,.06),0 2px 8px rgba(20,20,40,.05);}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',-apple-system,Roboto,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
-header{background:linear-gradient(120deg,#7c6bfb,#6d5bf7 60%,#8f7bff);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
-header h1{font-size:19px;margin:0;display:flex;align-items:center;gap:8px;white-space:nowrap}
-header select,header button{font-size:12px;padding:7px 10px}
+#fatalBanner{display:none;position:sticky;top:0;z-index:100;background:#fef2f2;color:#991b1b;border-bottom:1px solid #fecaca;padding:12px 20px;font-size:13px}
+#fatalBanner b{display:block;margin-bottom:2px}
+header{background:var(--panel);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:9px}
+.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b7cf6);display:flex;align-items:center;justify-content:center;font-size:17px}
+.brand b{font-size:16px;letter-spacing:-.2px}
+.brand small{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 select,input,textarea,button{font:inherit;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 12px}
 button{cursor:pointer;background:var(--accent);color:#fff;border:none;font-weight:600}
 button:hover{opacity:.92}
-button.sec{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.35)}
-main button.sec{background:var(--panel);color:var(--text);border:1px solid var(--border);font-weight:500}
+button.sec{background:var(--panel);color:var(--text);border:1px solid var(--border);font-weight:500}
 button:disabled{opacity:.5;cursor:default}
-nav{display:flex;gap:4px;padding:10px 16px 0;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--border)}
-nav button{background:transparent;color:var(--muted);border:none;border-radius:10px 10px 0 0;padding:10px 13px;font-weight:600;white-space:nowrap;font-size:13px}
-nav button.on{color:var(--accent);background:var(--bg)}
+nav{display:flex;gap:4px;padding:10px 16px;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--border)}
+nav button{background:transparent;color:var(--muted);border:none;border-radius:999px;padding:8px 14px;font-weight:600;white-space:nowrap;font-size:13px}
+nav button.on{color:var(--accent);background:var(--accent-soft)}
 main{max-width:840px;margin:0 auto;padding:20px}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
 .card h3{margin-top:0}
@@ -42,22 +45,25 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}
 @keyframes pulse{50%{opacity:.3}}
 pre{white-space:pre-wrap;font-size:12px;background:var(--bg);padding:10px;border-radius:8px}
 .stub{border:2px dashed var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--muted)}
-.creditbar{background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35)}
+.creditbar{border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;background:var(--accent-soft);color:var(--accent);border:1px solid var(--border)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
 </style>
 </head>
 <body>
+<div id="fatalBanner"><b>Something went wrong</b><span id="fatalMsg"></span></div>
 <div id="authScreen" style="display:none">
   <div class="card" style="max-width:380px;margin:70px auto">
-    <h3 id="auth-title">🎤 InterviewIQ — Sign in</h3>
+    <div class="brand" style="margin-bottom:14px"><div class="logo">🎤</div><div><b>InterviewIQ</b><small>Interview Intelligence</small></div></div>
+    <h3 id="auth-title" style="margin-top:0">Sign in</h3>
     <label>Email</label><input id="auth-email" type="email">
     <label>Password</label><input id="auth-pass" type="password">
-    <div class="row" style="margin-top:10px"><button onclick="doSignIn()">Sign in</button><button class="sec" style="color:var(--text);background:var(--panel);border:1px solid var(--border)" onclick="doSignUp()">Create account</button></div>
+    <div class="row" style="margin-top:10px"><button onclick="doSignIn()">Sign in</button><button class="sec" onclick="doSignUp()">Create account</button></div>
     <p id="auth-err" style="color:var(--danger);font-size:13px"></p>
   </div>
 </div>
 <div id="appScreen" style="display:none">
   <header>
-    <h1>🎤 InterviewIQ</h1>
+    <div class="brand"><div class="logo">🎤</div><div><b>InterviewIQ</b><small>Interview Intelligence</small></div></div>
     <div class="row">
       <span class="creditbar" id="creditBar">₹…</span>
       <button class="sec" id="voiceBtn" onclick="toggleVoice()">🔊 Off</button>
@@ -66,6 +72,7 @@ pre{white-space:pre-wrap;font-size:12px;background:var(--bg);padding:10px;border
         <option value="en-US-Wavenet-F">Female voice</option>
       </select>
       <button class="sec" onclick="doSignOut()">Sign out</button>
+      <div class="avatar" id="avatarDot">?</div>
     </div>
   </header>
   <nav id="nav"></nav>
@@ -83,7 +90,21 @@ window.__getTranscriber = () => _p || (_p = pipeline('automatic-speech-recogniti
 // ---- fill these in from your Supabase project (Settings → API) ----
 const SUPABASE_URL = "https://yzsquxlhxllculklabhu.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_HS9_fL95YmkF4cldBuIAXA_5nzmnAU-";
-const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function showFatal(msg){
+  document.getElementById('fatalMsg').textContent = msg;
+  document.getElementById('fatalBanner').style.display='block';
+}
+window.addEventListener('error', e => showFatal(e.message || 'Unknown script error'));
+window.addEventListener('unhandledrejection', e => showFatal((e.reason && e.reason.message) || String(e.reason)));
+
+if(SUPABASE_URL.includes('YOUR_SUPABASE_URL') || SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY')){
+  throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY are still placeholder text in index.html — paste your real Supabase Project URL and anon public key in, then redeploy.');
+}
+if(!/^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(SUPABASE_URL.trim())){
+  throw new Error('SUPABASE_URL looks malformed: "'+SUPABASE_URL+'" — it should look exactly like https://xxxxxxxx.supabase.co with nothing before or after it (no /rest/v1, no trailing text).');
+}
+const supa = supabase.createClient(SUPABASE_URL.trim(), SUPABASE_ANON_KEY.trim());
 
 let currentUser=null, myProfile=null;
 let personas=[]; let tab='dashboard'; let editingPersonaId=null;
@@ -97,6 +118,7 @@ let voiceName = localStorage.getItem('ic_voice_name') || 'en-US-Wavenet-D';
 async function doSignIn(){
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
+  if(!email || !pass){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent='Enter both email and password.'; return; }
   const {error}=await supa.auth.signInWithPassword({email,password:pass});
   if(error){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent=error.message; return; }
   await boot();
@@ -104,6 +126,8 @@ async function doSignIn(){
 async function doSignUp(){
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
+  if(!email || !pass){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent='Enter both email and password.'; return; }
+  if(pass.length<6){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent='Password must be at least 6 characters.'; return; }
   const {error}=await supa.auth.signUp({email,password:pass});
   if(error){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent=error.message; return; }
   document.getElementById('auth-err').style.color='var(--accent2)';
@@ -149,8 +173,19 @@ Keep it practical and specific, not generic advice.`;
   return x.recommendations;
 }
 async function refreshCredits(){
-  const {data}=await supa.from('profiles').select('credits_inr,is_admin,growth_areas').eq('id',currentUser.id).single();
-  if(data){ myProfile=data; document.getElementById('creditBar').textContent = myProfile.is_admin?'∞ Admin':('₹'+Math.max(0,myProfile.credits_inr).toFixed(2)); }
+  let {data}=await supa.from('profiles').select('email,credits_inr,is_admin,growth_areas').eq('id',currentUser.id).single();
+  if(!data){
+    // profile row created by a DB trigger on signup — occasionally not ready yet, retry once
+    await new Promise(r=>setTimeout(r,900));
+    ({data}=await supa.from('profiles').select('email,credits_inr,is_admin,growth_areas').eq('id',currentUser.id).single());
+  }
+  if(!data){
+    showFatal('Your account exists but no profile record was found yet. Wait a few seconds and reload the page. If this persists, check that the on_auth_user_created trigger ran (see supabase-setup.sql).');
+    return;
+  }
+  myProfile=data;
+  document.getElementById('creditBar').textContent = myProfile.is_admin?'∞ Admin':('₹'+Math.max(0,myProfile.credits_inr).toFixed(2));
+  document.getElementById('avatarDot').textContent = (myProfile.email||'?')[0].toUpperCase();
 }
 
 // ---------- growth-area tracking ----------
@@ -190,11 +225,11 @@ function renderGrowthPanel(){
 }
 
 function buildNav(){
-  const tabs=[["dashboard","Dashboard"],["interview","Interview"],["audio","Audio Analysis"],["bank","Question Bank"],["history","History"],["reads","Reads"],["shl","SHL Analysis"]];
+  const tabs=[["dashboard","Dashboard"],["interview","Interview"],["audio","Audio Analysis"],["bank","Persona"],["history","History"],["reads","Reads"],["shl","SHL Analysis"]];
   if(myProfile?.is_admin) tabs.push(["admin","Admin"]);
   document.getElementById('nav').innerHTML=tabs.map(t=>`<button class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
 }
-async function go(t){tab=t;buildNav();await render();}
+async function go(t){tab=t;buildNav();try{ await render(); }catch(e){ showFatal('This tab failed to load: '+(e.message||e)); }}
 
 // ---------- dashboard (home) ----------
 async function renderHome(){
@@ -213,7 +248,7 @@ async function renderHome(){
   ${renderGrowthPanel()}`;
 }
 
-// ---------- personas (Question Bank) ----------
+// ---------- personas ----------
 async function loadPersonas(){
   const {data,error}=await supa.from('personas').select('*').or(`user_id.eq.${currentUser.id},is_public.eq.true`).order('created_at',{ascending:false});
   personas = error||!data ? [] : data.map(r=>({id:r.id,ownerId:r.user_id,company:r.company,role:r.role,jdText:r.jd_text,label:r.label,toughness:r.toughness||'realistic',isPublic:r.is_public,mine:r.user_id===currentUser.id}));
@@ -471,7 +506,7 @@ function renderInterview(thinking){
   }
   if(!iv.active){
     el.innerHTML=`<div class="card"><h3>Start a mock interview</h3>
-    ${personas.length?`<select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${p.toughness})</option>`).join('')}</select><div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value)">Start</button></div>`:'<p class="hint">Create a persona in Question Bank first.</p>'}
+    ${personas.length?`<select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${p.toughness})</option>`).join('')}</select><div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value)">Start</button></div>`:'<p class="hint">Create a persona in the Persona tab first.</p>'}
     </div>`;
     return;
   }
@@ -658,15 +693,21 @@ async function render(){
   else if(tab==='admin') await renderAdmin();
 }
 async function boot(){
-  const {data:{session}}=await supa.auth.getSession();
-  if(!session){ document.getElementById('authScreen').style.display='block'; document.getElementById('appScreen').style.display='none'; return; }
-  currentUser=session.user;
-  await refreshCredits();
-  document.getElementById('authScreen').style.display='none';
-  document.getElementById('appScreen').style.display='block';
-  document.getElementById('voiceBtn').textContent=voiceOn?'🔊 On':'🔊 Off';
-  document.getElementById('voiceSel').value=voiceName;
-  buildNav(); await loadPersonas(); await render();
+  try{
+    const {data:{session}}=await supa.auth.getSession();
+    if(!session){ document.getElementById('authScreen').style.display='block'; document.getElementById('appScreen').style.display='none'; return; }
+    currentUser=session.user;
+    await refreshCredits();
+    if(!myProfile) return; // refreshCredits already showed a fatal banner explaining why
+    document.getElementById('authScreen').style.display='none';
+    document.getElementById('appScreen').style.display='block';
+    document.getElementById('voiceBtn').textContent=voiceOn?'🔊 On':'🔊 Off';
+    document.getElementById('voiceSel').value=voiceName;
+    buildNav(); await loadPersonas(); await render();
+  }catch(e){
+    showFatal('Startup failed: '+(e.message||e));
+    document.getElementById('authScreen').style.display='block';
+  }
 }
 boot();
 </script>
