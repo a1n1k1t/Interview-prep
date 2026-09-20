@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const USD_TO_INR = 96;
+const USD_TO_INR = 250; // per your calibration: $0.01 used = ₹2.5 charged
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
   try {
     const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
-    const body = { model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages };
+    const body = { model: 'claude-haiku-4-5-20251001', max_tokens: 700, messages };
     if (search) body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
