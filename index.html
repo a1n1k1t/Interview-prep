@@ -46,6 +46,11 @@ td,th{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}
 @keyframes pulse{50%{opacity:.3}}
 pre{white-space:pre-wrap;font-size:12px;background:var(--bg);padding:10px;border-radius:8px}
 .stub{border:2px dashed var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--muted)}
+.reads-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:4px}
+.read-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg)}
+.read-card .thumb{width:100%;aspect-ratio:3/4;overflow:hidden;position:relative;background:#fff;cursor:pointer}
+.read-card .thumb iframe{width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:none;pointer-events:none}
+.read-card .meta{padding:8px}
 .creditbar{border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;background:var(--accent-soft);color:var(--accent);border:1px solid var(--border)}
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
 </style>
@@ -111,7 +116,7 @@ let currentUser=null, myProfile=null;
 let personas=[]; let tab='dashboard'; let editingPersonaId=null;
 let iv={active:false,persona:null,turns:[],qn:0,max:5,pending:null};
 let rec={active:false,ctx:null,stream:null,analyser:null,recog:null,mediaRecorder:null,chunks:[],final:'',interim:'',vol:[],pitch:[],loopId:null,start:0};
-const MAXQ=5;
+const SAFETY_MAX_Q=25; // hard safety cap only — the candidate controls length via "End Interview"
 let voiceOn = localStorage.getItem('ic_voice_on')==='1';
 let voiceName = localStorage.getItem('ic_voice_name') || 'en-US-Wavenet-D';
 
@@ -286,9 +291,9 @@ function renderBank(){
   <label>Role</label><input id="p-role" value="${editing?editing.role||'':''}" placeholder="e.g. B2B Sales Development Rep">
   <label>Interview toughness</label>
   <select id="p-tough">
-    <option value="gentle" ${editing&&editing.toughness==='gentle'?'selected':''}>Gentle — HR / warm-up rounds</option>
-    <option value="realistic" ${!editing||editing.toughness==='realistic'?'selected':''}>Realistic — standard panel interviewer</option>
-    <option value="tough" ${editing&&editing.toughness==='tough'?'selected':''}>Tough — high-pressure round</option>
+    <option value="gentle" ${editing&&editing.toughness==='gentle'?'selected':''}>Easy — supportive, not trivial</option>
+    <option value="realistic" ${!editing||editing.toughness==='realistic'?'selected':''}>Mid — standard professional interviewer</option>
+    <option value="tough" ${editing&&editing.toughness==='tough'?'selected':''}>Tough — high-pressure, fact-checked</option>
   </select>
   <label>Paste job description / round notes (optional)</label>
   <textarea id="p-jd">${editing?editing.jdText||'':''}</textarea>
@@ -299,12 +304,12 @@ function renderBank(){
   </div></div>
   <div class="card"><h3>My personas</h3>
   ${mine.length?mine.map(p=>`<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-    <span>${p.label} <span class="pill">${p.toughness}</span> ${p.isPublic?'<span class="pill green">public</span>':''}</span>
+    <span>${p.label} <span class="pill">${toughLabel(p.toughness)}</span> ${p.isPublic?'<span class="pill green">public</span>':''}</span>
     <span class="row"><button class="sec" onclick="editPersona('${p.id}')">Edit</button><button class="sec" onclick="deletePersona('${p.id}')">Delete</button></span>
   </div>`).join(''):'<p class="hint">None yet.</p>'}
   </div>
   <div class="card"><h3>Public personas (from others)</h3>
-  ${pub.length?pub.map(p=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--border)"><span>${p.label} <span class="pill">${p.toughness}</span></span></div>`).join(''):'<p class="hint">None yet.</p>'}
+  ${pub.length?pub.map(p=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--border)"><span>${p.label} <span class="pill">${toughLabel(p.toughness)}</span></span></div>`).join(''):'<p class="hint">None yet.</p>'}
   </div>`;
 }
 
@@ -407,19 +412,34 @@ function scoreMetrics(m){
 }
 
 // ---------- mock interview ----------
-function buildRules(p){
+function toughLabel(id){ return {gentle:'Easy',realistic:'Mid',tough:'Tough'}[id]||id; }
+function buildRules(p, toughnessId){
+  const level = toughnessId || p.toughness || 'realistic';
   const tone={
-    gentle:"Tone: warm, encouraging, and gentle — like a supportive HR person putting the candidate at ease. Never sound interrogating.",
-    realistic:"Tone: professional and neutral, like a real hiring manager — courteous but not overly warm. Push for specifics when an answer is vague.",
-    tough:"Tone: rigorous and challenging, like a senior panel interviewer under time pressure. Rarely praise. Use sharp follow-ups on weak answers."
-  }[p.toughness||'realistic'];
+    gentle:"DIFFICULTY: Easy. Tone: warm and encouraging — but still ask substantive questions and expect real answers; do not make this trivially easy or skip follow-ups. Give the candidate room to recover from a shaky start before pushing further.",
+    realistic:"DIFFICULTY: Mid. Tone: professional and neutral, like a real hiring manager — courteous but not overly warm, roughly balanced between supportive and challenging. Push for specifics when an answer is vague.",
+    tough:"DIFFICULTY: Tough. Tone: rigorous, like a senior panel interviewer under time pressure. Rarely praise. Use sharp follow-ups on weak answers. Additionally: silently fact-check any verifiable claim the candidate makes (numbers, named frameworks, company facts, financial/technical concepts). If a stated fact is wrong, don't let it pass — open your NEXT question with a brief, professional correction before moving on (e.g. \"Just to correct one thing — WACC uses market values, not book values — now, on your next point...\")."
+  }[level];
   return `You are role-playing as an experienced human interviewer/recruiter for the role of ${p.role} ${p.company?"at "+p.company:""}.
 ${p.jdText?"Job description / round notes:\n"+p.jdText+"\n":""}
-Conduct a realistic interview. Ask ONE question per turn. If an answer is vague, ask a sharp natural follow-up instead of moving on. ${tone} Output ONLY the question text, no preamble, no numbering.`;
+${tone}
+
+HOW TO CONDUCT THIS INTERVIEW:
+- Opening question: tailor it to the role/company/notes above and make it open-ended — invite a substantive answer, not a yes/no.
+- After EVERY answer, silently evaluate it before asking the next question: (1) did they actually answer what was asked, or deflect to a rehearsed talking point? (2) is the answer shallow/vague, or comprehensive and specific? (3) is any stated fact, number, or framework wrong?
+- Then choose your next move accordingly: if shallow or vague, demand a concrete example or a specific number instead of jumping to a new topic. If strong and complete, pivot — introduce a related angle, a sudden constraint, or a natural follow-up building on what they said, rather than a disconnected new question. If a claim was factually wrong, address it per the difficulty setting above.
+- Apply the professional framework relevant to this role where it fits (e.g. STAR for behavioral stories, MECE/structured issue trees for case-style business questions, correct financial/valuation logic for finance roles) and judge structure, not just content.
+- Ask ONE question per turn. Output ONLY the question text — no preamble, no numbering, no meta-commentary, no labels like "Question:".`;
+}
+function changeToughness(level){
+  iv.toughness=level;
+  iv.turns[0]={role:"user",content:buildRules(iv.persona,level)+"\n[Note: the candidate just changed the difficulty to '"+toughLabel(level)+"' mid-interview — apply this from your NEXT question onward.]"};
+  renderInterview();
 }
 async function beginInterview(personaId){
   const p=personas.find(x=>x.id===personaId); if(!p) return;
-  iv={active:true,persona:p,turns:[{role:"user",content:buildRules(p)+"\nAsk your first question now."}],qn:0,max:MAXQ,pending:null};
+  const lvl=p.toughness||'realistic';
+  iv={active:true,persona:p,toughness:lvl,turns:[{role:"user",content:buildRules(p,lvl)+"\nAsk your first question now."}],qn:0,lastMetrics:[],error:null};
   renderInterview(); await askQuestion();
 }
 async function askQuestion(){
@@ -446,9 +466,13 @@ async function submitAnswer(){
     if(!m.transcript){ const t=prompt("No speech captured — type your answer:"); if(t) m.transcript=t; else {renderInterview();return;} }
     iv.turns.push({role:"user",content:m.transcript});
     iv.lastMetrics=iv.lastMetrics||[]; iv.lastMetrics.push(m);
-    if(iv.qn>=iv.max) await finishInterview();
-    else await askQuestion();
+    if(iv.qn>=SAFETY_MAX_Q){ await finishInterview(); return; } // safety cap only — otherwise the candidate decides when to stop
+    await askQuestion();
   });
+}
+function endInterviewNow(){
+  if(!iv.lastMetrics || !iv.lastMetrics.length){ alert('Answer at least one question before ending.'); return; }
+  finishInterview();
 }
 async function finishInterview(){
   document.getElementById('main').innerHTML='<div class="card">Scoring your interview…</div>';
@@ -457,9 +481,17 @@ async function finishInterview(){
   const growthContext=(myProfile.growth_areas||[]).filter(a=>a.status!=='resolved').length
     ? `Tracked recurring weak areas from previous sessions:\n${myProfile.growth_areas.filter(a=>a.status!=='resolved').map(g=>`- "${g.area}" (noted ${g.timesNoted}x)`).join('\n')}\n`
     : 'No prior tracked weaknesses yet — this may be their first session.\n';
-  let fb={overallScore:60,contentScore:60,structureScore:60,confidenceScore:60,strengths:[],improvements:[],summary:"",growthUpdate:{}};
+  let fb={overallScore:60,contentScore:60,structureScore:60,confidenceScore:60,strengths:[],improvements:[],factCheck:[],summary:"",growthUpdate:{}};
   try{
-    fb=await askClaude(`You are a strict, honest interview coach — do NOT be falsely encouraging or inflate scores. Be direct about real weaknesses; only praise what is genuinely strong. Here is a full interview transcript:\n${transcript.slice(0,8000)}\n\n${growthContext}\nGive JSON only: {"overallScore":0-100,"contentScore":0-100,"structureScore":0-100,"confidenceScore":0-100,"strengths":[3 short strings],"improvements":[3 short strings],"summary":"2 sentence honest summary","growthUpdate":{"stillPresent":["exact text of tracked areas above still showing in THIS session"],"resolved":["exact text of tracked areas that seem fixed now"],"newIssues":["any new recurring-worthy weakness, concise phrase"]}}`,true);
+    fb=await askClaude(`You are a strict, honest interview coach. Before scoring, first extract specific factual evidence from the transcript — do NOT score based on answer length or polished style; a short, precise answer should score as well as or better than a long rambling one if the underlying content is stronger. Be direct about real weaknesses; only praise what is genuinely strong.
+
+Here is the full interview transcript:
+${transcript.slice(0,8000)}
+
+${growthContext}
+Also review the transcript for any factual, numerical, or conceptual errors the CANDIDATE (not the interviewer) stated — flag every one you find, however small.
+
+Give JSON only: {"overallScore":0-100,"contentScore":0-100,"structureScore":0-100,"confidenceScore":0-100,"strengths":[3 short strings],"improvements":[3 short strings],"factCheck":["specific factual errors the candidate made — quote or paraphrase the wrong claim and give the correction; empty array if none"],"summary":"2 sentence honest summary","growthUpdate":{"stillPresent":["exact text of tracked areas above still showing in THIS session"],"resolved":["exact text of tracked areas that seem fixed now"],"newIssues":["any new recurring-worthy weakness, concise phrase"]}}`,true);
   }catch(e){}
   const scores=scoreMetrics(agg);
   const session={kind:"interview",personaLabel:iv.persona.label,createdAt:new Date().toISOString(),transcript,...agg,...scores,...fb};
@@ -495,6 +527,7 @@ function renderInterview(thinking){
     <p>${r.summary||''}</p>
     <b>Strengths</b><ul>${(r.strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
     <b>Improve</b><ul>${(r.improvements||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
+    ${(r.factCheck&&r.factCheck.length)?`<b>⚠️ Fact check</b><ul>${r.factCheck.map(s=>`<li>${s}</li>`).join('')}</ul>`:''}
     <button class="sec" style="margin:6px 0" onclick="document.getElementById('iv-tx').style.display='block';this.style.display='none'">📄 View transcript</button>
     <pre id="iv-tx" style="display:none">${r.transcript||''}</pre>
     ${r.recommendations?`<b>Recommendations</b><p>${r.recommendations}</p>`:`
@@ -508,15 +541,19 @@ function renderInterview(thinking){
   }
   if(!iv.active){
     el.innerHTML=`<div class="card"><h3>Start a mock interview</h3>
-    ${personas.length?`<select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${p.toughness})</option>`).join('')}</select><div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value)">Start</button></div>`:'<p class="hint">Create a persona in the Persona tab first.</p>'}
+    ${personas.length?`<select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${toughLabel(p.toughness)})</option>`).join('')}</select><div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value)">Start</button></div>`:'<p class="hint">Create a persona in the Persona tab first.</p>'}
     </div>`;
     return;
   }
   const last=iv.turns[iv.turns.length-1];
+  const levels=['gentle','realistic','tough'];
   el.innerHTML=`<div class="card">
-  <div class="row"><span id="rec-dot"></span><span class="pill">Question ${Math.min(iv.qn,iv.max)}/${iv.max}</span></div>
+  <div class="row" style="justify-content:space-between">
+    <div class="row"><span id="rec-dot"></span><span class="pill">Question ${iv.qn}</span></div>
+    <div class="row">${levels.map(l=>`<button class="sec" style="${iv.toughness===l?'background:var(--accent-soft);color:var(--accent);border-color:var(--accent)':''}" onclick="changeToughness('${l}')">${toughLabel(l)}</button>`).join('')}</div>
+  </div>
   ${thinking?'<p class="hint">Thinking…</p>':`<div class="q">${last.content}</div>
-  <button id="recBtn" onclick="submitAnswer()">${rec.active?'Stop & Submit':'Record Answer'}</button>
+  <div class="row"><button id="recBtn" onclick="submitAnswer()">${rec.active?'Stop & Submit':'Record Answer'}</button><button class="sec" onclick="endInterviewNow()">End Interview</button></div>
   <p id="live-t" class="hint" style="margin-top:8px"></p>`}
   ${iv.error?`<p style="color:var(--danger)">${iv.error}</p>`:''}
   </div>`;
@@ -661,9 +698,6 @@ async function deleteRead(id, path){
   await supa.from('reads').delete().eq('id',id);
   await go('reads');
 }
-function viewRead(path, viewId){
-  document.getElementById(viewId).innerHTML=`<iframe src="${readUrl(path)}" style="width:100%;height:600px;border:1px solid var(--border);border-radius:8px"></iframe>`;
-}
 function renderReadSection(title, kind, items){
   const isAdmin=myProfile.is_admin;
   return `<div class="card"><h3>${title}</h3>
@@ -672,22 +706,26 @@ function renderReadSection(title, kind, items){
   <input type="file" id="file-${kind}" accept="application/pdf" style="flex:2;min-width:160px">
   <button onclick="uploadRead('${kind}','file-${kind}','title-${kind}')">Upload</button>
   </div>`:''}
-  ${items.length?items.map((r,i)=>`
-  <div class="sess-row">
-    <div class="row" style="justify-content:space-between">
-      <span style="cursor:pointer" onclick="viewRead('${r.storage_path}','view-${kind}-${i}')">📄 ${r.title} <span class="hint">(${new Date(r.created_at).toLocaleDateString()})</span></span>
-      ${isAdmin?`<button class="sec" onclick="deleteRead('${r.id}','${r.storage_path}')">Delete</button>`:''}
+  ${items.length?`<div class="reads-grid">${items.map(r=>`
+  <div class="read-card">
+    <div class="thumb" onclick="window.open('${readUrl(r.storage_path)}#toolbar=0','_blank')">
+      <iframe src="${readUrl(r.storage_path)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" tabindex="-1"></iframe>
     </div>
-    <div id="view-${kind}-${i}" style="margin-top:8px"></div>
-  </div>`).join(''):`<p class="hint">Nothing uploaded yet${isAdmin?' — add one above.':', check back later.'}</p>`}
+    <div class="meta">
+      <div style="font-weight:600">${r.title}</div>
+      <div class="hint">${new Date(r.created_at).toLocaleDateString()}</div>
+      ${isAdmin?`<button class="sec" style="margin-top:4px;padding:4px 8px;font-size:11px" onclick="event.stopPropagation();deleteRead('${r.id}','${r.storage_path}')">Delete</button>`:''}
+    </div>
+  </div>`).join('')}</div>`:`<p class="hint">Nothing uploaded yet${isAdmin?' — add one above.':', check back later.'}</p>`}
   </div>`;
 }
 async function renderReads(){
   document.getElementById('main').innerHTML='<div class="card">Loading…</div>';
-  const [reports,newspapers]=await Promise.all([loadReads('report'),loadReads('newspaper')]);
+  const [reports,newspapers,twoMin]=await Promise.all([loadReads('report'),loadReads('newspaper'),loadReads('two_min_read')]);
   document.getElementById('main').innerHTML =
     renderReadSection('Report Summary','report',reports) +
-    renderReadSection('Newspaper (Economic Times)','newspaper',newspapers);
+    renderReadSection('Newspaper (Economic Times)','newspaper',newspapers) +
+    renderReadSection('2 Min Read','two_min_read',twoMin);
 }
 function renderSHL(){
   document.getElementById('main').innerHTML=`<div class="card"><h3>SHL Report Analysis</h3><div class="stub">Upload your SHL assessment PDF for a full breakdown and areas to work on.<br><b>Coming soon.</b></div></div>`;
@@ -703,14 +741,14 @@ async function renderAdmin(){
   if(!r.ok){ el.innerHTML=`<div class="card">${data.error}</div>`; return; }
   el.innerHTML=`<div class="card"><h3>Users (${data.users.length})</h3><table><tr><th>Email</th><th>Credits</th><th>Admin</th><th></th></tr>
   ${data.users.map(u=>`<tr><td>${u.email}</td><td>₹${Number(u.credits_inr).toFixed(2)}</td><td>${u.is_admin?'✅':''}</td>
-  <td><button class="sec" onclick="adminAdd('${u.id}')">+ Credit</button></td></tr>`).join('')}
+  <td><button class="sec" onclick="adminAdjust('${u.id}',1)">+ Credit</button> <button class="sec" onclick="adminAdjust('${u.id}',-1)">− Credit</button></td></tr>`).join('')}
   </table></div>`;
 }
-async function adminAdd(userId){
-  const amt=prompt("How much to add (₹)? e.g. 50");
+async function adminAdjust(userId, sign){
+  const amt=prompt((sign>0?"How much to ADD (₹)?":"How much to SUBTRACT (₹)?")+" e.g. 50");
   if(!amt || isNaN(amt)) return;
   const token=await authToken();
-  const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({userId,addCredits:Number(amt)})});
+  const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({userId,addCredits:sign*Number(amt)})});
   if(!r.ok){ alert('Failed'); return; }
   await renderAdmin();
 }
