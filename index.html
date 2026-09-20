@@ -94,8 +94,8 @@ window.__getTranscriber = () => _p || (_p = pipeline('automatic-speech-recogniti
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ---- fill these in from your Supabase project (Settings → API) ----
-const SUPABASE_URL = "https://yzsquxlhxllculklabhu.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_HS9_fL95YmkF4cldBuIAXA_5nzmnAU-";
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
 function showFatal(msg){
   document.getElementById('fatalMsg').textContent = msg;
@@ -369,6 +369,7 @@ async function startCapture(onTranscript){
       rec.interim=inter; onTranscript && onTranscript(rec.final+rec.interim);
     };
     rec.recog.onerror=()=>{};
+    rec.recog.onend=()=>{ if(rec.active){ try{ rec.recog.start(); }catch(e){} } }; // Chrome silently drops long sessions — restart seamlessly if still recording
     rec.recog.start();
   }else{
     rec.chunks=[];
