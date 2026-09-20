@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       update.credits_inr = setCredits;
     } else if (typeof addCredits === 'number') {
       const { data: u } = await admin.from('profiles').select('credits_inr').eq('id', userId).single();
-      update.credits_inr = (u?.credits_inr || 0) + addCredits;
+      update.credits_inr = Math.max(0, (u?.credits_inr || 0) + addCredits);
     } else {
       return res.status(400).json({ error: 'Provide addCredits or setCredits' });
     }
