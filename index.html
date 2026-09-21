@@ -340,7 +340,7 @@ async function whisperTranscribe(blob){
   tempCtx.close();
   const pcm=rendered.getChannelData(0);
   const transcriber=await window.__getTranscriber();
-  const result=await transcriber(pcm);
+  const result=await transcriber(pcm,{chunk_length_s:30,stride_length_s:5});
   return result.text||'';
 }
 async function startCapture(onTranscript){
@@ -493,6 +493,7 @@ ${growthContext}
 Also review the transcript for any factual, numerical, or conceptual errors the CANDIDATE (not the interviewer) stated — flag every one you find, however small.
 
 Give JSON only: {"overallScore":0-100,"contentScore":0-100,"structureScore":0-100,"confidenceScore":0-100,"strengths":[3 short strings],"improvements":[3 short strings],"factCheck":["specific factual errors the candidate made — quote or paraphrase the wrong claim and give the correction; empty array if none"],"summary":"2 sentence honest summary","growthUpdate":{"stillPresent":["exact text of tracked areas above still showing in THIS session"],"resolved":["exact text of tracked areas that seem fixed now"],"newIssues":["any new recurring-worthy weakness, concise phrase"]}}`,true);
+    fb={...{overallScore:60,contentScore:60,structureScore:60,confidenceScore:60,strengths:[],improvements:[],factCheck:[],summary:"",growthUpdate:{}}, ...fb};
   }catch(e){}
   const scores=scoreMetrics(agg);
   const session={kind:"interview",personaLabel:iv.persona.label,createdAt:new Date().toISOString(),transcript,...agg,...scores,...fb};
@@ -606,6 +607,7 @@ async function aaToggle(){
     let fb={overallScore:60,summary:""};
     try{
       fb=await askClaude(`You are a strict, honest coach — do not inflate scores. Give feedback on this spoken answer to "${aa.topic}":\n${(m.transcript||'(no transcript captured)').slice(0,4000)}\n\nJSON only: {"overallScore":0-100,"summary":"2-3 sentence honest feedback on content and delivery"}`,true);
+      fb={overallScore:60,summary:"",...fb};
     }catch(e){}
     const scores=scoreMetrics(m);
     const session={kind:"audio_analysis",topic:aa.topic,createdAt:new Date().toISOString(),...m,...scores,...fb};
