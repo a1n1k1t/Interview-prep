@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
   try {
     const messages = Array.isArray(input) ? input : [{ role: 'user', content: input }];
-    const body = { model: 'claude-haiku-4-5-20251001', max_tokens: 700, messages };
+    const body = { model: 'claude-haiku-4-5-20251001', max_tokens: 1500, messages };
     if (search) body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
