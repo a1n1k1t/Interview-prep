@@ -10,6 +10,11 @@ export default async function handler(req, res) {
   if (!me?.is_admin) return res.status(403).json({ error: 'Admins only' });
 
   if (req.method === 'GET') {
+    if (req.query.sessionsFor) {
+      const { data, error } = await admin.from('sessions').select('data').eq('user_id', req.query.sessionsFor).order('created_at', { ascending: false }).limit(100);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ sessions: (data || []).map(r => r.data) });
+    }
     const { data, error } = await admin.from('profiles').select('id,email,credits_inr,is_admin,created_at').order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ users: data });
