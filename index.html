@@ -4,55 +4,85 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>InterviewIQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f7f8fc;--panel:#fff;--text:#151521;--muted:#6b7280;--border:#e8e9f1;--accent:#5b45e8;--accent-soft:#eeebff;--accent2:#16a34a;--warn:#d97706;--danger:#dc2626;--radius:14px;--shadow:0 1px 3px rgba(20,20,40,.06),0 2px 8px rgba(20,20,40,.05);}
+:root{--bg:#f8f9ff;--panel:#ffffff;--panel-alt:#eff4ff;--text:#0b1c30;--muted:#464555;--border:#d3e4fe;--accent:#4f46e5;--accent-dark:#3525cd;--accent-soft:#e5eeff;--secondary:#712ae2;--emerald:#10b981;--emerald-soft:#ecfdf5;--amber:#f59e0b;--amber-soft:#fffbeb;--danger:#dc2626;--danger-soft:#fee2e2;--radius:1rem;--radius-sm:0.75rem;--shadow:0 1px 3px rgba(11,28,48,.06),0 4px 10px rgba(11,28,48,.05);}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',-apple-system,Roboto,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.brand b{font-family:Manrope,sans-serif}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24;font-size:20px;vertical-align:middle}
 #fatalBanner{display:none;position:sticky;top:0;z-index:100;background:#fef2f2;color:#991b1b;border-bottom:1px solid #fecaca;padding:12px 20px;font-size:13px}
 #fatalBanner b{display:block;margin-bottom:2px}
 header{background:var(--panel);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:9px}
-.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#8b7cf6);display:flex;align-items:center;justify-content:center;font-size:17px}
-.brand b{font-size:16px;letter-spacing:-.2px}
-.brand small{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-select,input,textarea,button{font:inherit;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 12px}
-button{cursor:pointer;background:var(--accent);color:#fff;border:none;font-weight:600}
-button:hover{opacity:.92}
-button.sec{background:var(--panel);color:var(--text);border:1px solid var(--border);font-weight:500}
+.brand .logo{width:36px;height:36px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:var(--shadow)}
+.brand b{font-size:17px;letter-spacing:-.3px;font-weight:800}
+.brand small{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+select,input,textarea,button{font:inherit;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px}
+button{cursor:pointer;background:var(--accent);color:#fff;border:none;font-weight:700}
+button:hover{background:var(--accent-dark)}
+button:active{transform:scale(.98)}
+button.sec{background:var(--panel-alt);color:var(--text);border:1px solid var(--border);font-weight:600}
+button.sec:hover{background:var(--accent-soft);opacity:1}
 button:disabled{opacity:.5;cursor:default}
 nav{display:flex;gap:4px;padding:10px 16px;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--border)}
-nav button{background:transparent;color:var(--muted);border:none;border-radius:999px;padding:8px 14px;font-weight:600;white-space:nowrap;font-size:13px}
+nav button{background:transparent;color:var(--muted);border:none;border-radius:999px;padding:8px 14px;font-weight:700;white-space:nowrap;font-size:13px}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
 main{max-width:840px;margin:0 auto;padding:20px}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
-.card h3{margin-top:0}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h3{margin-top:0;font-weight:700}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-label{font-size:13px;color:var(--muted);display:block;margin:8px 0 3px}
+label{font-size:13px;color:var(--muted);font-weight:600;display:block;margin:8px 0 3px}
 textarea{width:100%;min-height:80px;resize:vertical}
 input,select{width:100%}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.15)}
 input[type=checkbox]{width:auto;accent-color:var(--accent)}
-.q{font-size:18px;font-weight:700;margin:6px 0 14px;line-height:1.4}
-.metric{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:7px 12px;margin:3px 5px 0 0;font-size:13px;font-weight:600}
+.q{font-size:22px;font-weight:800;margin:10px 0 16px;line-height:1.4;font-family:Manrope,sans-serif}
+.metric{display:inline-block;background:var(--panel-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 13px;margin:3px 5px 0 0;font-size:13px;font-weight:700}
 .hint{color:var(--muted);font-size:12px}
-.pill{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:12px;font-weight:600}
-.pill.red{background:#fee2e2;color:#991b1b;border-color:#fecaca}
-.pill.amber{background:#fef3c7;color:#92400e;border-color:#fde68a}
-.pill.green{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.pill{display:inline-block;padding:4px 11px;border-radius:999px;background:var(--panel-alt);border:1px solid var(--border);font-size:12px;font-weight:700}
+.pill.red{background:var(--danger-soft);color:#991b1b;border-color:#fecaca}
+.pill.amber{background:var(--amber-soft);color:#92400e;border-color:#fde68a}
+.pill.green{background:var(--emerald-soft);color:#065f46;border-color:#a7f3d0}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;font-size:12.5px;font-weight:600;margin:2px 4px 2px 0}
+.chip.strength{background:var(--emerald-soft);color:#065f46;border:1px solid #a7f3d0}
+.chip.improve{background:var(--amber-soft);color:#92400e;border:1px solid #fde68a}
+.alert-danger{background:var(--danger-soft);border:1px solid #fecaca;border-radius:var(--radius-sm);padding:14px 16px;margin:12px 0}
+.alert-danger b{color:#991b1b;display:block;margin-bottom:4px}
+.gauge{width:150px;height:150px;margin:6px auto;position:relative}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .track{fill:none;stroke:var(--panel-alt);stroke-width:12}
+.gauge .fill{fill:none;stroke:var(--accent);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.gauge .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge .num b{font-size:34px;font-family:Manrope,sans-serif;line-height:1}
+.gauge .num span{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.bar-outer{background:var(--panel-alt);border-radius:999px;height:8px;overflow:hidden;margin-top:6px}
+.bar-inner{height:100%;border-radius:999px;background:var(--accent)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 td,th{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left}
 .sess-row{border-bottom:1px solid var(--border);padding:10px 0}
 .sess-row:last-child{border-bottom:none}
 #rec-dot{display:none;width:10px;height:10px;border-radius:50%;background:var(--danger);animation:pulse 1s infinite;margin-right:6px}
 @keyframes pulse{50%{opacity:.3}}
-pre{white-space:pre-wrap;font-size:12px;background:var(--bg);padding:10px;border-radius:8px}
+pre{white-space:pre-wrap;font-size:12px;background:var(--panel-alt);padding:10px;border-radius:var(--radius-sm)}
 .stub{border:2px dashed var(--border);border-radius:var(--radius);padding:30px;text-align:center;color:var(--muted)}
 .reads-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:4px}
-.read-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg)}
+.read-card{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--panel-alt)}
 .read-card .thumb{width:100%;aspect-ratio:3/4;overflow:hidden;position:relative;background:#fff;cursor:pointer}
 .read-card .thumb iframe{width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:none;pointer-events:none}
 .read-card .meta{padding:8px}
 .creditbar{border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;background:var(--accent-soft);color:var(--accent);border:1px solid var(--border)}
-.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--secondary));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.hero-cta{background:linear-gradient(135deg,var(--accent),var(--secondary));color:#fff;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
+.hero-cta h3{color:#fff;margin-top:0}
+.hero-cta p{color:rgba(255,255,255,.85);margin:4px 0 14px}
+.hero-cta button{background:#fff;color:var(--accent-dark)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:10px}
+.stat-card{background:var(--panel-alt);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.stat-card b{display:block;font-size:22px;font-family:Manrope,sans-serif}
+.stat-card span{font-size:11px;color:var(--muted);font-weight:600}
 </style>
 </head>
 <body>
@@ -136,7 +166,7 @@ async function doSignUp(){
   if(pass.length<6){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent='Password must be at least 6 characters.'; return; }
   const {error}=await supa.auth.signUp({email,password:pass});
   if(error){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent=error.message; return; }
-  document.getElementById('auth-err').style.color='var(--accent2)';
+  document.getElementById('auth-err').style.color='var(--emerald)';
   document.getElementById('auth-err').textContent='Account created. If email confirmation is on, check your inbox, then sign in.';
 }
 async function doSignOut(){ await supa.auth.signOut(); location.reload(); }
@@ -244,12 +274,17 @@ async function renderHome(){
   const days=[...new Set(sessions.map(x=>new Date(x.createdAt).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
   let streak=0,cur=new Date();
   for(let i=0;i<days.length;i++){ const d=new Date(days[i]); const diff=Math.round((cur-d)/86400000); if(diff<=streak+1){ streak++; cur=d; } else break; }
+  const avgScore=sessions.length?Math.round(sessions.reduce((a,x)=>a+(x.overallScore||0),0)/sessions.length):0;
   document.getElementById('main').innerHTML=`
-  <div class="card"><h3>Welcome back${myProfile.email?', '+myProfile.email.split('@')[0]:''}</h3>
-  <div class="metric">Balance ${myProfile.is_admin?'∞':'₹'+Math.max(0,myProfile.credits_inr).toFixed(2)}</div>
-  <div class="metric">${sessions.length} sessions total</div>
-  <div class="metric">🔥 ${streak}-day streak</div>
-  <div class="row" style="margin-top:12px"><button onclick="go('interview')">Start Mock Interview</button><button class="sec" onclick="go('audio')">Audio Analysis</button></div>
+  <div class="card"><h3>Welcome back${myProfile.email?', '+myProfile.email.split('@')[0]:''} 👋</h3>
+  <div class="stat-grid">
+    <div class="stat-card"><b>₹${myProfile.is_admin?'∞':Math.max(0,myProfile.credits_inr).toFixed(0)}</b><span>Balance</span></div>
+    <div class="stat-card"><b>${sessions.length}</b><span>Sessions</span></div>
+    <div class="stat-card"><b>🔥 ${streak}</b><span>Day streak</span></div>
+    <div class="stat-card"><b>${avgScore||'–'}</b><span>Avg score</span></div>
+  </div></div>
+  <div class="hero-cta"><h3>Start Mock Interview</h3><p>Full or half format, adapts to your answers in real time.</p>
+  <div class="row"><button onclick="go('interview')">▶ Start Round</button><button class="sec" style="background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.4)" onclick="go('audio')">Audio Analysis</button></div>
   </div>
   ${renderGrowthPanel()}`;
 }
@@ -414,19 +449,30 @@ function scoreMetrics(m){
 
 // ---------- mock interview ----------
 function toughLabel(id){ return {gentle:'Easy',realistic:'Mid',tough:'Tough'}[id]||id; }
-function buildRules(p, toughnessId){
+function buildRules(p, toughnessId, mode){
   const level = toughnessId || p.toughness || 'realistic';
   const tone={
     gentle:"DIFFICULTY: Easy. Tone: warm and encouraging — but still ask substantive questions and expect real answers; do not make this trivially easy or skip follow-ups. Give the candidate room to recover from a shaky start before pushing further.",
     realistic:"DIFFICULTY: Mid. Tone: professional and neutral, like a real hiring manager — courteous but not overly warm, roughly balanced between supportive and challenging. Push for specifics when an answer is vague.",
     tough:"DIFFICULTY: Tough. Tone: rigorous, like a senior panel interviewer under time pressure. Rarely praise. Use sharp follow-ups on weak answers. Additionally: silently fact-check any verifiable claim the candidate makes (numbers, named frameworks, company facts, financial/technical concepts). If a stated fact is wrong, don't let it pass — open your NEXT question with a brief, professional correction before moving on (e.g. \"Just to correct one thing — WACC uses market values, not book values — now, on your next point...\")."
   }[level];
+  const fullModeBlock = mode==='full' ? `
+
+FULL INTERVIEW STRUCTURE — this is a "Full Interview": simulate the complete arc of a real interview, not just role-specific questions from the start:
+- Question 1: open with a broad rapport-building question — "Tell me about yourself" or "Tell me something interesting about you that isn't on your resume/CV." This is NOT about the role yet, it's how a real interview actually opens.
+- After that answer, silently judge it: if it revealed something genuinely notable, unusual, or impressive (a specific project, achievement, or experience worth exploring), ask ONE more follow-up digging into that specific thing before moving on. If the answer was generic or thin, move on immediately — don't force a second rapport question just for the sake of it.
+- Over the next 1-2 questions, bridge naturally from what they shared toward the role — pick up a thread from their background and connect it to why they want this role, or ask directly why they're interested in it.
+- From there onward, conduct the substantive role-specific interview using the framework and evaluate-and-pivot approach described below.
+- Never spend more than 3 questions total in this rapport/bridging phase before you're fully into role-specific territory — the transcript so far tells you how many questions have already happened.` : `
+
+HALF INTERVIEW — start directly with role-specific questions per the framework below; skip general rapport-building, this session goes straight to substance.`;
   return `You are role-playing as an experienced human interviewer/recruiter for the role of ${p.role} ${p.company?"at "+p.company:""}.
 ${p.jdText?"Job description / round notes:\n"+p.jdText+"\n":""}
 ${tone}
+${fullModeBlock}
 
-HOW TO CONDUCT THIS INTERVIEW:
-- Opening question: tailor it to the role/company/notes above and make it open-ended — invite a substantive answer, not a yes/no.
+HOW TO CONDUCT THE ROLE-SPECIFIC PART OF THIS INTERVIEW:
+- Make each role-specific question open-ended — invite a substantive answer, not a yes/no.
 - After EVERY answer, silently evaluate it before asking the next question: (1) did they actually answer what was asked, or deflect to a rehearsed talking point? (2) is the answer shallow/vague, or comprehensive and specific? (3) is any stated fact, number, or framework wrong?
 - Then choose your next move accordingly: if shallow or vague, demand a concrete example or a specific number instead of jumping to a new topic. If strong and complete, pivot — introduce a related angle, a sudden constraint, or a natural follow-up building on what they said, rather than a disconnected new question. If a claim was factually wrong, address it per the difficulty setting above.
 - Apply the professional framework relevant to this role where it fits (e.g. STAR for behavioral stories, MECE/structured issue trees for case-style business questions, correct financial/valuation logic for finance roles) and judge structure, not just content.
@@ -434,13 +480,13 @@ HOW TO CONDUCT THIS INTERVIEW:
 }
 function changeToughness(level){
   iv.toughness=level;
-  iv.turns[0]={role:"user",content:buildRules(iv.persona,level)+"\n[Note: the candidate just changed the difficulty to '"+toughLabel(level)+"' mid-interview — apply this from your NEXT question onward.]"};
+  iv.turns[0]={role:"user",content:buildRules(iv.persona,level,iv.mode)+"\n[Note: the candidate just changed the difficulty to '"+toughLabel(level)+"' mid-interview — apply this from your NEXT question onward.]"};
   renderInterview();
 }
-async function beginInterview(personaId){
+async function beginInterview(personaId, mode){
   const p=personas.find(x=>x.id===personaId); if(!p) return;
   const lvl=p.toughness||'realistic';
-  iv={active:true,persona:p,toughness:lvl,turns:[{role:"user",content:buildRules(p,lvl)+"\nAsk your first question now."}],qn:0,lastMetrics:[],error:null};
+  iv={active:true,persona:p,toughness:lvl,mode:mode||'half',turns:[{role:"user",content:buildRules(p,lvl,mode)+"\nAsk your first question now."}],qn:0,lastMetrics:[],error:null};
   renderInterview(); await askQuestion();
 }
 async function askQuestion(){
@@ -496,7 +542,7 @@ Give JSON only: {"overallScore":0-100,"contentScore":0-100,"structureScore":0-10
     fb={...{overallScore:60,contentScore:60,structureScore:60,confidenceScore:60,strengths:[],improvements:[],factCheck:[],summary:"",growthUpdate:{}}, ...fb};
   }catch(e){}
   const scores=scoreMetrics(agg);
-  const session={kind:"interview",personaLabel:iv.persona.label,createdAt:new Date().toISOString(),transcript,...agg,...scores,...fb};
+  const session={kind:"interview",personaLabel:iv.persona.label,mode:iv.mode,createdAt:new Date().toISOString(),transcript,...agg,...scores,...fb};
   try{
     const {data}=await supa.from('sessions').insert({user_id:currentUser.id,kind:session.kind,data:session}).select().single();
     if(data) session._rowId=data.id;
@@ -519,18 +565,33 @@ async function ivGetRec(){
   try{ await fetchRecommendations(iv.result, useSearch); await refreshCredits(); }catch(e){ iv.result.recommendations='Could not fetch — try again.'; }
   renderInterview();
 }
+function svgGauge(score){
+  const r=60, c=2*Math.PI*r, off=c*(1-Math.min(100,Math.max(0,score||0))/100);
+  return `<div class="gauge"><svg width="150" height="150" viewBox="0 0 150 150">
+  <circle class="track" cx="75" cy="75" r="${r}"></circle>
+  <circle class="fill" cx="75" cy="75" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"></circle>
+  </svg><div class="num"><b>${score}</b><span>/ 100</span></div></div>`;
+}
+function subBar(label, val){
+  return `<div style="margin-top:10px"><div class="row" style="justify-content:space-between"><span style="font-weight:600;font-size:13px">${label}</span><span style="font-weight:700;font-size:13px">${val}/100</span></div><div class="bar-outer"><div class="bar-inner" style="width:${val}%"></div></div></div>`;
+}
 function renderInterview(thinking){
   const el=document.getElementById('main');
   if(!iv.active && iv.result){
     const r=iv.result;
-    el.innerHTML=`<div class="card"><h3>Interview complete — ${r.personaLabel}</h3>
-    <div class="metric">Overall ${r.overallScore}/100</div><div class="metric">Content ${r.contentScore}/100</div><div class="metric">Structure ${r.structureScore}/100</div><div class="metric">Confidence ${r.confidenceScore}/100</div>
-    <div class="metric">Pace ${r.wpm} wpm</div><div class="metric">Fillers ${r.fillers}</div><div class="metric">Pauses ${r.pauseCount} (${r.pauseSec}s)</div><div class="metric">Pitch var ${r.pVar}Hz</div>
-    <p>${r.summary||''}</p>
-    <b>Strengths</b><ul>${(r.strengths||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
-    <b>Improve</b><ul>${(r.improvements||[]).map(s=>`<li>${s}</li>`).join('')}</ul>
-    ${(r.factCheck&&r.factCheck.length)?`<b>⚠️ Fact check</b><ul>${r.factCheck.map(s=>`<li>${s}</li>`).join('')}</ul>`:''}
-    <button class="sec" style="margin:6px 0" onclick="document.getElementById('iv-tx').style.display='block';this.style.display='none'">📄 View transcript</button>
+    el.innerHTML=`<div class="card">
+    <div class="row" style="justify-content:space-between"><h3 style="margin:0">Interview complete</h3><span class="pill">${r.mode==='full'?'Full':'Half'} Interview</span></div>
+    <p class="hint" style="margin-top:2px">${r.personaLabel}</p>
+    ${svgGauge(r.overallScore)}
+    ${subBar('Content & relevance', r.contentScore)}
+    ${subBar('Structure & clarity', r.structureScore)}
+    ${subBar('Confidence & delivery', r.confidenceScore)}
+    <div style="margin-top:14px"><div class="metric">Pace ${r.wpm} wpm</div><div class="metric">Fillers ${r.fillers}</div><div class="metric">Pauses ${r.pauseCount} (${r.pauseSec}s)</div><div class="metric">Pitch var ${r.pVar}Hz</div></div>
+    <p style="margin-top:14px">${r.summary||''}</p>
+    ${(r.factCheck&&r.factCheck.length)?`<div class="alert-danger"><b>⚠️ Fact check</b>${r.factCheck.map(s=>`<div>• ${s}</div>`).join('')}</div>`:''}
+    <div style="margin-top:10px">${(r.strengths||[]).map(s=>`<span class="chip strength">✓ ${s}</span>`).join('')}</div>
+    <div style="margin-top:6px">${(r.improvements||[]).map(s=>`<span class="chip improve">△ ${s}</span>`).join('')}</div>
+    <button class="sec" style="margin:14px 0 0" onclick="document.getElementById('iv-tx').style.display='block';this.style.display='none'">📄 View transcript</button>
     <pre id="iv-tx" style="display:none">${r.transcript||''}</pre>
     ${r.recommendations?`<b>Recommendations</b><p>${r.recommendations}</p>`:`
     <div class="row" style="margin-top:10px">
@@ -543,7 +604,13 @@ function renderInterview(thinking){
   }
   if(!iv.active){
     el.innerHTML=`<div class="card"><h3>Start a mock interview</h3>
-    ${personas.length?`<select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${toughLabel(p.toughness)})</option>`).join('')}</select><div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value)">Start</button></div>`:'<p class="hint">Create a persona in the Persona tab first.</p>'}
+    ${personas.length?`<label>Persona</label><select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${toughLabel(p.toughness)})</option>`).join('')}</select>
+    <label>Interview type</label>
+    <select id="modeSel">
+      <option value="full">Full Interview — opens with "tell me about yourself," then bridges into the role</option>
+      <option value="half">Half Interview — goes straight into role-specific questions</option>
+    </select>
+    <div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value,document.getElementById('modeSel').value)">Start</button></div>`:'<p class="hint">Create a persona in the Persona tab first.</p>'}
     </div>`;
     return;
   }
@@ -554,7 +621,7 @@ function renderInterview(thinking){
     <div class="row"><span id="rec-dot"></span><span class="pill">Question ${iv.qn}</span></div>
     <div class="row">${levels.map(l=>`<button class="sec" style="${iv.toughness===l?'background:var(--accent-soft);color:var(--accent);border-color:var(--accent)':''}" onclick="changeToughness('${l}')">${toughLabel(l)}</button>`).join('')}</div>
   </div>
-  ${thinking?'<p class="hint">Thinking…</p>':`<div class="q">${last.content}</div>
+  ${thinking?'<p class="hint">Thinking…</p>':`<div class="q">"${last.content}"</div>
   <div class="row"><button id="recBtn" onclick="submitAnswer()">${rec.active?'Stop & Submit':'Record Answer'}</button><button class="sec" onclick="endInterviewNow()">End Interview</button></div>
   <p id="live-t" class="hint" style="margin-top:8px"></p>`}
   ${iv.error?`<p style="color:var(--danger)">${iv.error}</p>`:''}
@@ -638,8 +705,9 @@ function renderSessionRow(x,i){
       ${x.kind==='interview'?`<div class="metric">Content ${x.contentScore}/100</div><div class="metric">Structure ${x.structureScore}/100</div><div class="metric">Confidence ${x.confidenceScore}/100</div>`:''}
       <div class="metric">Pace ${x.wpm} wpm</div><div class="metric">Fillers ${x.fillers}</div><div class="metric">Pauses ${x.pauseCount||0} (${x.pauseSec||0}s)</div><div class="metric">Pitch var ${x.pVar}Hz</div>
       <p>${x.summary||''}</p>
-      ${(x.strengths&&x.strengths.length)?`<b>Strengths</b><ul>${x.strengths.map(s=>`<li>${s}</li>`).join('')}</ul>`:''}
-      ${(x.improvements&&x.improvements.length)?`<b>Improve</b><ul>${x.improvements.map(s=>`<li>${s}</li>`).join('')}</ul>`:''}
+      ${(x.strengths&&x.strengths.length)?`<div style="margin-top:8px">${x.strengths.map(s=>`<span class="chip strength">✓ ${s}</span>`).join('')}</div>`:''}
+      ${(x.improvements&&x.improvements.length)?`<div style="margin-top:6px">${x.improvements.map(s=>`<span class="chip improve">△ ${s}</span>`).join('')}</div>`:''}
+      ${(x.factCheck&&x.factCheck.length)?`<div class="alert-danger"><b>⚠️ Fact check</b>${x.factCheck.map(s=>`<div>• ${s}</div>`).join('')}</div>`:''}
       ${x.transcript?`<button class="sec" style="margin:6px 0" onclick="document.getElementById('tx-${i}').style.display='block';this.style.display='none'">📄 View transcript</button><pre id="tx-${i}" style="display:none">${x.transcript}</pre>`:''}
       ${x.recommendations?`<b>Recommendations</b><p>${x.recommendations}</p>`:`
       <div class="row" style="margin-top:8px"><label class="hint"><input type="checkbox" id="srch-${i}"> search web</label>
