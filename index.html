@@ -83,6 +83,20 @@ pre{white-space:pre-wrap;font-size:12px;background:var(--panel-alt);padding:10px
 .stat-card{background:var(--panel-alt);border-radius:var(--radius-sm);padding:12px;text-align:center}
 .stat-card b{display:block;font-size:22px;font-family:Manrope,sans-serif}
 .stat-card span{font-size:11px;color:var(--muted);font-weight:600}
+.gc{border-bottom:1px solid var(--border)}
+.gc-head{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0}
+.gc-body{padding:2px 0 10px 14px}
+.gc-item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:6px 0}
+button.mini,.mini{padding:4px 9px;font-size:11px;border-radius:8px}
+.chat-box{max-height:420px;min-height:120px;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:88%;padding:10px 13px;border-radius:var(--radius-sm);white-space:pre-wrap;font-size:14px;line-height:1.5}
+.bubble.user{background:var(--accent-soft);margin-left:auto}
+.bubble.ai{background:var(--panel-alt);border:1px solid var(--border)}
+.bubble.err{background:var(--danger-soft);color:#991b1b}
+.link-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.link-item:last-child{border-bottom:none}
+.link-title{font-weight:700;color:var(--accent);text-decoration:none;word-break:break-word}
+a.link-title:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -224,22 +238,65 @@ async function refreshCredits(){
   document.getElementById('avatarDot').textContent = (myProfile.email||'?')[0].toUpperCase();
 }
 
-// ---------- growth-area tracking ----------
+// ---------- helpers ----------
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function clip(s,n){ return String(s||'').replace(/\s+/g,' ').trim().slice(0,n); }
+
+// ---------- growth-area tracking (grouped by pattern) ----------
+const GROWTH_THEMES=[
+ {id:'fact',label:'Factual accuracy',kw:['fact*','incorrect*','inaccura*','wrong','error*','mistake*','misstat*','false','misquot*']},
+ {id:'quant',label:'Quantified results & numbers',kw:['number*','metric*','quantif*','data','statistic*','percent*','figure*','measur*','kpi*','roi','numeric*']},
+ {id:'specific',label:'Specific examples & evidence',kw:['example*','instance*','evidence','specific*','concrete','vague','generic','shallow','detail*','anecdot*','abstract','theoretic*','conceptual','circl*','unsupported','substantiat*']},
+ {id:'ramble',label:'Conciseness & focus',kw:['rambl*','lengthy','long winded','verbose','concis*','brevity','wordy','repetit*','repeat*','unfocus*']},
+ {id:'direct',label:'Answering the question asked',kw:['deflect*','evad*','direct*','relevan*','tangent*','sidestep*','dodg*','unanswer*','answer*']},
+ {id:'structure',label:'Structure & frameworks',kw:['structur*','framework*','star','mece','organi*','logic*','flow','sequenc*','outline','signpost*']},
+ {id:'owner',label:'Ownership & personal contribution',kw:['ownership','owner*','contribution*','accountab*','credit','we vs i','i vs we','team effort','your role','personal role']},
+ {id:'hedge',label:'Confident, decisive language',kw:['confiden*','hedg*','uncertain*','tentative*','unsure','hesita*','assertive*','decisive*','apolog*','defensive*','waver*','backtrack*','qualif*','wishy washy']},
+ {id:'knowledge',label:'Company & domain knowledge',kw:['knowledge','research*','company','domain','industry','market*','awareness','familiar*','prepar*','unprepared','understand*','insight*']},
+ {id:'filler',label:'Filler words',kw:['filler*','um','uh','umm']},
+ {id:'pace',label:'Speaking pace',kw:['pace','pacing','fast','slow','rushed','rushing','tempo','wpm']},
+ {id:'pause',label:'Pauses & silence',kw:['pause*','silence*','silent']},
+ {id:'pitch',label:'Vocal variety & tone',kw:['pitch','monoton*','tone','inflection','modulat*','vocal','energy','flat','intonation']}
+];
+const STOPWORDS=new Set('the a an and or of to in on for with at by from is are was were be been it this that these those as your you their they he she we i not no but so if then than too very more most can could should would may might do does did have has had into about over under between during his her its our my me'.split(' '));
+function normText(t){ return String(t||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim(); }
+function kwMatch(kw,norm,tokens){
+  if(kw.indexOf(' ')>=0) return (' '+norm+' ').indexOf(' '+kw+' ')>=0;
+  if(kw.slice(-1)==='*'){ const p=kw.slice(0,-1); return tokens.some(t=>t.indexOf(p)===0); }
+  return tokens.indexOf(kw)>=0;
+}
+function themeOf(text){
+  const norm=normText(text), tokens=norm.split(' ').filter(Boolean);
+  for(const th of GROWTH_THEMES){ if(th.kw.some(k=>kwMatch(k,norm,tokens))) return th; }
+  return null;
+}
+function stemSet(text){
+  return new Set(normText(text).split(' ').filter(t=>t.length>2&&!STOPWORDS.has(t)).map(t=>t.slice(0,5)));
+}
+function jaccard(a,b){ let i=0; a.forEach(x=>{ if(b.has(x)) i++; }); const u=a.size+b.size-i; return u?i/u:0; }
+function findSimilarIdx(text,areas){
+  const exact=areas.findIndex(x=>x.area===text); if(exact>=0) return exact;
+  const s=stemSet(text); let best=-1,bestScore=0;
+  areas.forEach((x,i)=>{ const j=jaccard(s,stemSet(x.area)); if(j>bestScore){ bestScore=j; best=i; } });
+  return bestScore>=0.5?best:-1;
+}
 function reconcileGrowth(existing, upd){
   const now=new Date().toISOString();
-  let areas=(existing||[]).slice();
-  (upd.stillPresent||[]).forEach(a=>{
-    const i=areas.findIndex(x=>x.area===a);
-    if(i>=0){ areas[i].timesNoted=(areas[i].timesNoted||1)+1; areas[i].lastNoted=now; areas[i].status='unchanged'; }
-    else areas.push({area:a,firstNoted:now,lastNoted:now,timesNoted:1,status:'new'});
-  });
+  const areas=(existing||[]).map(a=>({...a}));
+  const bump=(text,reopen)=>{
+    const i=findSimilarIdx(text,areas);
+    if(i>=0){
+      if(areas[i].ignored) return; // ignored areas stay hidden and don't come back under new wording
+      areas[i].timesNoted=(areas[i].timesNoted||1)+1; areas[i].lastNoted=now;
+      areas[i].status=(areas[i].status==='resolved'&&reopen)?'new':'unchanged';
+    }else areas.push({area:text,firstNoted:now,lastNoted:now,timesNoted:1,status:'new'});
+  };
+  (upd.stillPresent||[]).forEach(a=>bump(a,false));
   (upd.resolved||[]).forEach(a=>{
     const i=areas.findIndex(x=>x.area===a);
-    if(i>=0){ areas[i].status='resolved'; areas[i].lastNoted=now; }
+    if(i>=0&&!areas[i].ignored){ areas[i].status='resolved'; areas[i].lastNoted=now; }
   });
-  (upd.newIssues||[]).forEach(a=>{
-    if(!areas.find(x=>x.area===a)) areas.push({area:a,firstNoted:now,lastNoted:now,timesNoted:1,status:'new'});
-  });
+  (upd.newIssues||[]).forEach(a=>bump(a,true));
   return areas;
 }
 async function saveGrowthAreas(areas){
@@ -247,22 +304,78 @@ async function saveGrowthAreas(areas){
   const token=await authToken();
   try{ await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({saveGrowthAreas:areas})}); }catch(e){}
 }
-function renderGrowthPanel(){
-  const areas=(myProfile.growth_areas||[]).filter(a=>a.status!=='resolved').sort((a,b)=>(b.timesNoted||0)-(a.timesNoted||0));
-  const resolved=(myProfile.growth_areas||[]).filter(a=>a.status==='resolved');
-  if(!areas.length && !resolved.length) return '';
+function buildGrowthClusters(areas){
+  const byTheme=new Map(), leftovers=[];
+  (areas||[]).forEach((a,idx)=>{
+    if(a.status==='resolved'||a.ignored) return;
+    const th=themeOf(a.area);
+    if(th){ if(!byTheme.has(th.id)) byTheme.set(th.id,{key:th.id,label:th.label,items:[]}); byTheme.get(th.id).items.push(idx); }
+    else leftovers.push(idx);
+  });
+  const reps=[];
+  leftovers.sort((i,j)=>(areas[j].timesNoted||1)-(areas[i].timesNoted||1)).forEach(idx=>{
+    const s=stemSet(areas[idx].area);
+    const hit=reps.find(r=>jaccard(r.set,s)>=0.34);
+    if(hit) hit.items.push(idx); else reps.push({key:'x'+idx,label:areas[idx].area,set:s,items:[idx]});
+  });
+  const clusters=[...byTheme.values(),...reps.map(r=>({key:r.key,label:r.label,items:r.items}))];
+  clusters.forEach(c=>{
+    c.items.sort((i,j)=>(areas[j].timesNoted||1)-(areas[i].timesNoted||1));
+    c.total=c.items.reduce((n,i)=>n+(areas[i].timesNoted||1),0);
+  });
+  clusters.sort((a,b)=>b.total-a.total);
+  return clusters;
+}
+let openClusters=new Set(), showAllClusters=false, showIgnoredList=false;
+function growthPanelInner(){
+  const areas=myProfile.growth_areas||[];
+  const clusters=buildGrowthClusters(areas);
+  const ignored=areas.map((a,i)=>({a,i})).filter(x=>x.a.ignored);
+  const resolved=areas.filter(a=>a.status==='resolved'&&!a.ignored);
+  if(!clusters.length&&!ignored.length&&!resolved.length) return '';
+  const shown=showAllClusters?clusters:clusters.slice(0,5);
+  const fmt=t=>t?new Date(t).toLocaleDateString():'';
   return `<div class="card"><h3>Your growth areas</h3>
-  <p class="hint">Tracked honestly across every session — recurring issues get flagged more, not less, the longer they persist.</p>
-  ${areas.map(a=>`<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-    <span>${a.area}</span><span class="pill ${a.timesNoted>=3?'red':'amber'}">noted ${a.timesNoted}x</span>
-  </div>`).join('')}
-  ${resolved.length?`<p class="hint" style="margin-top:8px">✅ Resolved: ${resolved.map(a=>a.area).join('; ')}</p>`:''}
+  <p class="hint">Similar issues are grouped by pattern. Tap a group to see every issue inside it. Ignore what you don't care about, or delete it.</p>
+  ${shown.map(c=>{
+    const open=openClusters.has(c.key);
+    return `<div class="gc"><div class="gc-head" onclick="toggleCluster('${c.key}')">
+      <span><b>${open?'▾':'▸'} ${esc(c.label)}</b> <span class="hint">· ${c.items.length} issue${c.items.length>1?'s':''}</span></span>
+      <span class="pill ${c.total>=6?'red':'amber'}">noted ${c.total}x</span></div>
+      ${open?`<div class="gc-body">
+        ${c.items.map(i=>{ const a=areas[i]; return `<div class="gc-item"><div><div>${esc(a.area)}</div><div class="hint">noted ${a.timesNoted||1}x · last ${fmt(a.lastNoted)}</div></div>
+          <div class="row" style="flex-wrap:nowrap"><button class="sec mini" onclick="growthIgnore(${i})">Ignore</button><button class="sec mini" onclick="growthDelete(${i})">Delete</button></div></div>`; }).join('')}
+        <div class="row" style="margin-top:6px"><button class="sec mini" onclick="growthClusterAction('${c.key}','ignore')">Ignore all</button><button class="sec mini" onclick="growthClusterAction('${c.key}','delete')">Delete all</button></div>
+      </div>`:''}</div>`;
+  }).join('')}
+  ${clusters.length>5?`<button class="sec mini" style="margin-top:8px" onclick="showAllClusters=!showAllClusters;rerenderGrowth()">${showAllClusters?'Show fewer':'Show '+(clusters.length-5)+' more groups'}</button>`:''}
+  ${resolved.length?`<p class="hint" style="margin-top:10px">✅ Resolved: ${resolved.map(a=>esc(a.area)).join('; ')}</p>`:''}
+  ${ignored.length?`<p class="hint" style="margin-top:8px;cursor:pointer" onclick="showIgnoredList=!showIgnoredList;rerenderGrowth()">${showIgnoredList?'▾':'▸'} Ignored (${ignored.length})</p>
+    ${showIgnoredList?ignored.map(x=>`<div class="gc-item"><div class="hint">${esc(x.a.area)}</div><div class="row" style="flex-wrap:nowrap"><button class="sec mini" onclick="growthRestore(${x.i})">Restore</button><button class="sec mini" onclick="growthDelete(${x.i})">Delete</button></div></div>`).join(''):''}`:''}
   </div>`;
+}
+function renderGrowthPanel(){ return `<div id="growth-panel">${growthPanelInner()}</div>`; }
+function rerenderGrowth(){ const el=document.getElementById('growth-panel'); if(el) el.innerHTML=growthPanelInner(); }
+function toggleCluster(k){ if(openClusters.has(k)) openClusters.delete(k); else openClusters.add(k); rerenderGrowth(); }
+async function growthSave(areas){ myProfile.growth_areas=areas; rerenderGrowth(); await saveGrowthAreas(areas); }
+async function growthIgnore(i){ const a=(myProfile.growth_areas||[]).slice(); a[i]={...a[i],ignored:true}; await growthSave(a); }
+async function growthRestore(i){ const a=(myProfile.growth_areas||[]).slice(); a[i]={...a[i],ignored:false}; await growthSave(a); }
+async function growthDelete(i){
+  if(!confirm('Delete this growth area?')) return;
+  await growthSave((myProfile.growth_areas||[]).filter((_,j)=>j!==i));
+}
+async function growthClusterAction(key,action){
+  const c=buildGrowthClusters(myProfile.growth_areas||[]).find(x=>x.key===key); if(!c) return;
+  if(action==='delete' && !confirm('Delete all '+c.items.length+' issues in this group?')) return;
+  let a=(myProfile.growth_areas||[]).slice();
+  if(action==='ignore') c.items.forEach(i=>{ a[i]={...a[i],ignored:true}; });
+  else { const del=new Set(c.items); a=a.filter((_,j)=>!del.has(j)); }
+  await growthSave(a);
 }
 
 function buildNav(){
   const tabs=[["dashboard","Dashboard"],["interview","Interview"],["audio","Audio Analysis"],["bank","Persona"],["history","History"],["reads","Reads"],["shl","SHL Analysis"]];
-  if(myProfile?.is_admin) tabs.push(["admin","Admin"]);
+  if(myProfile?.is_admin){ tabs.push(["coach","Coach Chat"]); tabs.push(["admin","Admin"]); }
   document.getElementById('nav').innerHTML=tabs.map(t=>`<button class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
 }
 async function go(t){tab=t;buildNav();try{ await render(); }catch(e){ showFatal('This tab failed to load: '+(e.message||e)); }}
@@ -339,12 +452,12 @@ function renderBank(){
   </div></div>
   <div class="card"><h3>My personas</h3>
   ${mine.length?mine.map(p=>`<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-    <span>${p.label} <span class="pill">${toughLabel(p.toughness)}</span> ${p.isPublic?'<span class="pill green">public</span>':''}</span>
+    <span>${esc(p.label)} <span class="pill">${toughLabel(p.toughness)}</span> ${p.isPublic?'<span class="pill green">public</span>':''}</span>
     <span class="row"><button class="sec" onclick="editPersona('${p.id}')">Edit</button><button class="sec" onclick="deletePersona('${p.id}')">Delete</button></span>
   </div>`).join(''):'<p class="hint">None yet.</p>'}
   </div>
   <div class="card"><h3>Public personas (from others)</h3>
-  ${pub.length?pub.map(p=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--border)"><span>${p.label} <span class="pill">${toughLabel(p.toughness)}</span></span></div>`).join(''):'<p class="hint">None yet.</p>'}
+  ${pub.length?pub.map(p=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--border)"><span>${esc(p.label)} <span class="pill">${toughLabel(p.toughness)}</span></span></div>`).join(''):'<p class="hint">None yet.</p>'}
   </div>`;
 }
 
@@ -525,8 +638,9 @@ async function finishInterview(){
   document.getElementById('main').innerHTML='<div class="card">Scoring your interview…</div>';
   const transcript=iv.turns.slice(1).map(t=>(t.role==='assistant'?'Interviewer: ':'You: ')+t.content).join('\n\n');
   const agg=aggregate(iv.lastMetrics||[]);
-  const growthContext=(myProfile.growth_areas||[]).filter(a=>a.status!=='resolved').length
-    ? `Tracked recurring weak areas from previous sessions:\n${myProfile.growth_areas.filter(a=>a.status!=='resolved').map(g=>`- "${g.area}" (noted ${g.timesNoted}x)`).join('\n')}\n`
+  const tracked=(myProfile.growth_areas||[]).filter(a=>a.status!=='resolved'&&!a.ignored).sort((a,b)=>(b.timesNoted||0)-(a.timesNoted||0)).slice(0,8);
+  const growthContext=tracked.length
+    ? `Tracked recurring weak areas from previous sessions (top ${tracked.length}):\n${tracked.map(g=>`- "${g.area}" (noted ${g.timesNoted}x)`).join('\n')}\n`
     : 'No prior tracked weaknesses yet — this may be their first session.\n';
   let fb={overallScore:60,contentScore:60,structureScore:60,confidenceScore:60,strengths:[],improvements:[],factCheck:[],summary:"",growthUpdate:{}};
   try{
@@ -538,7 +652,7 @@ ${transcript.slice(0,8000)}
 ${growthContext}
 Also review the transcript for any factual, numerical, or conceptual errors the CANDIDATE (not the interviewer) stated — flag every one you find, however small.
 
-Give JSON only: {"overallScore":0-100,"contentScore":0-100,"structureScore":0-100,"confidenceScore":0-100,"strengths":[3 short strings],"improvements":[3 short strings],"factCheck":["specific factual errors the candidate made — quote or paraphrase the wrong claim and give the correction; empty array if none"],"summary":"2 sentence honest summary","growthUpdate":{"stillPresent":["exact text of tracked areas above still showing in THIS session"],"resolved":["exact text of tracked areas that seem fixed now"],"newIssues":["any new recurring-worthy weakness, concise phrase"]}}`,true);
+Give JSON only: {"overallScore":0-100,"contentScore":0-100,"structureScore":0-100,"confidenceScore":0-100,"strengths":[3 short strings],"improvements":[3 short strings],"factCheck":["specific factual errors the candidate made — quote or paraphrase the wrong claim and give the correction; empty array if none"],"summary":"2 sentence honest summary","growthUpdate":{"stillPresent":["exact text of tracked areas above still showing in THIS session"],"resolved":["exact text of tracked areas that seem fixed now"],"newIssues":["new recurring-worthy weakness as a short generic 3-8 word phrase; if it is the same issue as one in the tracked list, reuse that exact wording"]}}`,true);
     fb={...{overallScore:60,contentScore:60,structureScore:60,confidenceScore:60,strengths:[],improvements:[],factCheck:[],summary:"",growthUpdate:{}}, ...fb};
   }catch(e){}
   const scores=scoreMetrics(agg);
@@ -604,7 +718,7 @@ function renderInterview(thinking){
   }
   if(!iv.active){
     el.innerHTML=`<div class="card"><h3>Start a mock interview</h3>
-    ${personas.length?`<label>Persona</label><select id="pSel">${personas.map(p=>`<option value="${p.id}">${p.label} (${toughLabel(p.toughness)})</option>`).join('')}</select>
+    ${personas.length?`<label>Persona</label><select id="pSel">${personas.map(p=>`<option value="${p.id}">${esc(p.label)} (${toughLabel(p.toughness)})</option>`).join('')}</select>
     <label>Interview type</label>
     <select id="modeSel">
       <option value="full">Full Interview — opens with "tell me about yourself," then bridges into the role</option>
@@ -763,21 +877,59 @@ async function uploadRead(kind, inputId, titleId){
   if(insErr){ alert('File uploaded but could not be listed: '+insErr.message); return; }
   await go('reads');
 }
+async function uploadTwoMinRead(){
+  const title=document.getElementById('title-two_min_read').value.trim();
+  const body=document.getElementById('body-two_min_read').value.trim();
+  if(!title||!body){ alert('Add both a topic and the text.'); return; }
+  const {error}=await supa.from('reads').insert({kind:'two_min_read',title,body_text:body,uploaded_by:currentUser.id});
+  if(error){ alert('Failed: '+error.message); return; }
+  await go('reads');
+}
 async function deleteRead(id, path){
   if(!confirm('Delete this for everyone?')) return;
-  await supa.storage.from('reads').remove([path]);
+  if(path) await supa.storage.from('reads').remove([path]);
   await supa.from('reads').delete().eq('id',id);
   await go('reads');
 }
-function renderReadSection(title, kind, items){
+let reportsCache=[], twoMinCache=[];
+async function editReadTitle(kind, i){
+  const r=(kind==='report'?reportsCache:twoMinCache)[i];
+  const t=prompt('New title:', r.title);
+  if(t===null || !t.trim()) return;
+  await supa.from('reads').update({title:t.trim()}).eq('id',r.id);
+  await go('reads');
+}
+async function editTwoMinRead(i){
+  const r=twoMinCache[i];
+  const t=prompt('Topic/title:', r.title);
+  if(t===null) return;
+  const b=prompt('Full text:', r.body_text||'');
+  if(b===null) return;
+  await supa.from('reads').update({title:t.trim(),body_text:b}).eq('id',r.id);
+  await go('reads');
+}
+async function attachLikes(items){
+  if(!items.length) return items;
+  const {data}=await supa.from('read_likes').select('read_id,user_id').in('read_id',items.map(x=>x.id));
+  const rows=data||[];
+  return items.map(x=>({...x,_likeCount:rows.filter(r=>r.read_id===x.id).length,_liked:rows.some(r=>r.read_id===x.id&&r.user_id===currentUser.id)}));
+}
+async function toggleLike(readId){
+  const {data}=await supa.from('read_likes').select('*').eq('read_id',readId).eq('user_id',currentUser.id).maybeSingle();
+  if(data) await supa.from('read_likes').delete().eq('read_id',readId).eq('user_id',currentUser.id);
+  else await supa.from('read_likes').insert({read_id:readId,user_id:currentUser.id});
+  await go('reads');
+}
+function renderReadSection(title, kind, items, showLikes){
   const isAdmin=myProfile.is_admin;
+  if(kind==='report') reportsCache=items;
   return `<div class="card"><h3>${title}</h3>
   ${isAdmin?`<div class="row" style="margin-bottom:10px">
   <input type="text" id="title-${kind}" placeholder="Title (optional)" style="flex:2;min-width:140px">
   <input type="file" id="file-${kind}" accept="application/pdf" style="flex:2;min-width:160px">
   <button onclick="uploadRead('${kind}','file-${kind}','title-${kind}')">Upload</button>
   </div>`:''}
-  ${items.length?`<div class="reads-grid">${items.map(r=>`
+  ${items.length?`<div class="reads-grid">${items.map((r,i)=>`
   <div class="read-card">
     <div class="thumb" onclick="window.open('${readUrl(r.storage_path)}#toolbar=0','_blank')">
       <iframe src="${readUrl(r.storage_path)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" tabindex="-1"></iframe>
@@ -785,21 +937,181 @@ function renderReadSection(title, kind, items){
     <div class="meta">
       <div style="font-weight:600">${r.title}</div>
       <div class="hint">${new Date(r.created_at).toLocaleDateString()}</div>
-      ${isAdmin?`<button class="sec" style="margin-top:4px;padding:4px 8px;font-size:11px" onclick="event.stopPropagation();deleteRead('${r.id}','${r.storage_path}')">Delete</button>`:''}
+      <div class="row" style="margin-top:4px">
+      ${showLikes?`<button class="sec" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();toggleLike('${r.id}')">${r._liked?'❤️':'🤍'} ${r._likeCount||0}</button>`:''}
+      ${isAdmin?`<button class="sec" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();editReadTitle('${kind}',${i})">Edit</button>
+      <button class="sec" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();deleteRead('${r.id}','${r.storage_path}')">Delete</button>`:''}
+      </div>
     </div>
   </div>`).join('')}</div>`:`<p class="hint">Nothing uploaded yet${isAdmin?' — add one above.':', check back later.'}</p>`}
   </div>`;
 }
+function toggleFlashcard(i){
+  const el=document.getElementById('flash-'+i);
+  const hint=document.getElementById('flash-hint-'+i);
+  const open=el.style.display==='block';
+  el.style.display=open?'none':'block';
+  hint.textContent=open?'Tap to expand':'Tap to collapse';
+}
+function renderTwoMinSection(items){
+  twoMinCache=items;
+  const isAdmin=myProfile.is_admin;
+  return `<div class="card"><h3>2 Min Read</h3>
+  ${isAdmin?`<div style="margin-bottom:10px">
+  <input type="text" id="title-two_min_read" placeholder="Topic / title">
+  <textarea id="body-two_min_read" placeholder="Paste the full text here" style="margin-top:6px"></textarea>
+  <button style="margin-top:6px" onclick="uploadTwoMinRead()">Add flashcard</button>
+  </div>`:''}
+  ${items.length?`<div class="reads-grid">${items.map((r,i)=>`
+  <div class="read-card" style="aspect-ratio:unset">
+    <div style="padding:14px;cursor:pointer" onclick="toggleFlashcard(${i})">
+      <div style="font-weight:700">${r.title}</div>
+      <div id="flash-${i}" style="display:none;margin-top:8px;font-size:13px;white-space:pre-wrap">${r.body_text||''}</div>
+      <div class="hint" id="flash-hint-${i}" style="margin-top:6px">Tap to expand</div>
+    </div>
+    <div class="meta" style="padding-top:0">
+      <div class="row">
+      <button class="sec" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();toggleLike('${r.id}')">${r._liked?'❤️':'🤍'} ${r._likeCount||0}</button>
+      ${isAdmin?`<button class="sec" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();editTwoMinRead(${i})">Edit</button>
+      <button class="sec" style="padding:4px 8px;font-size:11px" onclick="event.stopPropagation();deleteRead('${r.id}',null)">Delete</button>`:''}
+      </div>
+    </div>
+  </div>`).join('')}</div>`:`<p class="hint">Nothing yet${isAdmin?' — add one above.':', check back later.'}</p>`}
+  </div>`;
+}
 async function renderReads(){
   document.getElementById('main').innerHTML='<div class="card">Loading…</div>';
-  const [reports,newspapers,twoMin]=await Promise.all([loadReads('report'),loadReads('newspaper'),loadReads('two_min_read')]);
+  let [reports,newspapers,twoMin,links]=await Promise.all([loadReads('report'),loadReads('newspaper'),loadReads('two_min_read'),loadReads('link')]);
+  reports=await attachLikes(reports);
+  twoMin=await attachLikes(twoMin);
   document.getElementById('main').innerHTML =
-    renderReadSection('Report Summary','report',reports) +
-    renderReadSection('Newspaper (Economic Times)','newspaper',newspapers) +
-    renderReadSection('2 Min Read','two_min_read',twoMin);
+    renderReadSection('Report Summary','report',reports,true) +
+    renderReadSection('Newspaper (Economic Times)','newspaper',newspapers,false) +
+    renderTwoMinSection(twoMin) +
+    renderLinksSection(links);
 }
 function renderSHL(){
   document.getElementById('main').innerHTML=`<div class="card"><h3>SHL Report Analysis</h3><div class="stub">Upload your SHL assessment PDF for a full breakdown and areas to work on.<br><b>Coming soon.</b></div></div>`;
+}
+
+// ---------- Reads: links (admin adds, everyone can open) ----------
+let linksCache=[];
+function parseLink(r){ const parts=String(r.body_text||'').split('\n'); return {url:parts[0].trim(), note:parts.slice(1).join('\n').trim()}; }
+function cleanUrl(u){
+  u=String(u||'').trim(); if(!u) return null;
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(u)) u='https://'+u;
+  try{ const x=new URL(u); return (x.protocol==='http:'||x.protocol==='https:')?x.href:null; }catch(e){ return null; }
+}
+async function addLink(){
+  const title=document.getElementById('link-title').value.trim();
+  const url=cleanUrl(document.getElementById('link-url').value);
+  const note=document.getElementById('link-note').value.trim();
+  if(!title){ alert('Add a short title so people know what this link is.'); return; }
+  if(!url){ alert('Enter a valid link (http:// or https://).'); return; }
+  const {error}=await supa.from('reads').insert({kind:'link',title,body_text:url+(note?'\n'+note:''),uploaded_by:currentUser.id});
+  if(error){ alert('Failed: '+error.message); return; }
+  await go('reads');
+}
+async function editLink(i){
+  const r=linksCache[i], l=parseLink(r);
+  const t=prompt('Title:',r.title); if(t===null||!t.trim()) return;
+  const u=prompt('Link:',l.url); if(u===null) return;
+  const url=cleanUrl(u); if(!url){ alert('That is not a valid link.'); return; }
+  const n=prompt('Short note (optional):',l.note); if(n===null) return;
+  await supa.from('reads').update({title:t.trim(),body_text:url+(n.trim()?'\n'+n.trim():'')}).eq('id',r.id);
+  await go('reads');
+}
+function renderLinksSection(items){
+  linksCache=items; const isAdmin=myProfile.is_admin;
+  return `<div class="card"><h3>Useful Links</h3><p class="hint">Hand-picked articles and videos. Tap a title to open it in a new tab.</p>
+  ${isAdmin?`<div style="margin-bottom:10px"><input type="text" id="link-title" placeholder="Short title (e.g. How Maggi won back India)"><input type="text" id="link-url" placeholder="https://…" style="margin-top:6px"><input type="text" id="link-note" placeholder="Optional note" style="margin-top:6px"><button style="margin-top:6px" onclick="addLink()">Add link</button></div>`:''}
+  ${items.length?items.map((r,i)=>{
+    const l=parseLink(r), safe=cleanUrl(l.url); let host=''; try{ host=new URL(safe).hostname.replace(/^www\./,''); }catch(e){}
+    return `<div class="link-item"><div style="min-width:0">${safe?`<a class="link-title" href="${esc(safe)}" target="_blank" rel="noopener noreferrer">${esc(r.title)} ↗</a>`:`<span class="link-title">${esc(r.title)}</span>`}<div class="hint">${esc(host)}${l.note?' · '+esc(l.note):''}</div></div>
+    ${isAdmin?`<div class="row" style="flex-wrap:nowrap"><button class="sec mini" onclick="editLink(${i})">Edit</button><button class="sec mini" onclick="deleteRead('${r.id}',null)">Delete</button></div>`:''}</div>`;
+  }).join(''):`<p class="hint">No links yet${isAdmin?' — add one above.':', check back later.'}</p>`}
+  </div>`;
+}
+
+// ---------- admin-only coach chat (cheap context: compact digest + retrieved excerpts) ----------
+let coach={sessions:null,msgs:[],busy:false};
+const COACH_CHIPS=['Where am I weakest on confidence?','Which weakness keeps repeating, and what drill fixes it?','What has improved over my last 5 sessions?','What do my fact errors have in common?'];
+async function loadCoachData(force){
+  if(coach.sessions&&!force) return;
+  const {data}=await supa.from('sessions').select('data,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(40);
+  coach.sessions=(data||[]).map(r=>({...r.data,_ts:r.created_at}));
+}
+function avgOf(arr,k){ const v=arr.map(x=>x[k]).filter(n=>typeof n==='number'&&isFinite(n)); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
+function trendLine(label,arr,k,digits){
+  const a=avgOf(arr.slice(0,5),k); if(a===null) return null;
+  const b=avgOf(arr.slice(5,10),k);
+  return label+': last5 '+a.toFixed(digits)+(b!==null?' vs prev5 '+b.toFixed(digits)+' ('+(a>=b?'+':'')+(a-b).toFixed(digits)+')':'');
+}
+function buildCoachDigest(){
+  const s=coach.sessions||[];
+  if(!s.length) return 'No sessions recorded yet.';
+  const d=s.map(x=>({...x,fr:x.wordCount?x.fillers/x.wordCount*100:null,ppm:x.durationSec?(x.pauseCount||0)/(x.durationSec/60):null}));
+  const trends=[trendLine('overall',d,'overallScore',0),trendLine('content',d,'contentScore',0),trendLine('structure',d,'structureScore',0),trendLine('language confidence (judged from wording only)',d,'confidenceScore',0),trendLine('pace wpm',d,'wpm',0),trendLine('fillers per 100 words',d,'fr',1),trendLine('pauses per minute',d,'ppm',1),trendLine('pitch variation Hz',d,'pVar',0)].filter(Boolean);
+  const ga=myProfile.growth_areas||[];
+  const themes=buildGrowthClusters(ga).slice(0,8).map(c=>'- '+c.label+' ('+c.total+'x): '+c.items.slice(0,2).map(i=>clip(ga[i].area,70)).join('; '));
+  const lines=d.slice(0,25).map((x,i)=>'S'+(i+1)+' '+new Date(x.createdAt||x._ts).toLocaleDateString('en-GB')+' '+(x.kind==='interview'?'interview/'+(x.mode||'half')+' '+clip(x.personaLabel,40):'audio '+clip(x.topic,40))+' | overall '+(x.overallScore==null?'-':x.overallScore)+(x.kind==='interview'?' content '+(x.contentScore==null?'-':x.contentScore)+' struct '+(x.structureScore==null?'-':x.structureScore)+' conf '+(x.confidenceScore==null?'-':x.confidenceScore):'')+' | wpm '+(x.wpm==null?'-':x.wpm)+' fill/100w '+(x.fr==null?'-':x.fr.toFixed(1))+' pause/min '+(x.ppm==null?'-':x.ppm.toFixed(1))+' pitchSD '+(x.pVar==null?'-':x.pVar)+'Hz | '+clip(x.summary,200)+' | improve: '+(x.improvements||[]).slice(0,3).map(t=>clip(t,80)).join('; ')+((x.factCheck&&x.factCheck.length)?' | fact errors: '+x.factCheck.slice(0,2).map(t=>clip(t,100)).join('; '):''));
+  return 'TRENDS (newest 5 vs previous 5 sessions)\n'+trends.join('\n')+'\n\nGROWTH THEMES\n'+(themes.join('\n')||'none')+'\n\nSESSIONS (S1 = newest)\n'+lines.join('\n');
+}
+function coachSnippets(q){
+  const qs=stemSet(q), wantsConf=/confiden|hedg|assertiv|decisive|hesita/i.test(q);
+  const HEDGE=/\b(i think|maybe|kind of|sort of|not sure|i guess|probably|perhaps|might be|i feel like)\b/gi;
+  const chunks=[];
+  (coach.sessions||[]).slice(0,25).forEach((x,si)=>{
+    if(!x.transcript) return;
+    const when=new Date(x.createdAt||x._ts).toLocaleDateString('en-GB'), pairs=[];
+    if(x.kind==='interview'){
+      const parts=x.transcript.split('\n\n');
+      parts.forEach((p,i)=>{ if(p.indexOf('You: ')===0){ const prev=parts[i-1]||''; pairs.push({q:prev.indexOf('Interviewer: ')===0?prev.slice(13):'',a:p.slice(5)}); } });
+    }else pairs.push({q:x.topic||'',a:x.transcript});
+    pairs.forEach(pr=>{
+      const cs=stemSet(pr.q+' '+pr.a); let score=0; qs.forEach(t=>{ if(cs.has(t)) score++; });
+      if(wantsConf) score+=Math.min(4,(pr.a.match(HEDGE)||[]).length);
+      if(score>=2) chunks.push({score,tag:'S'+(si+1)+' '+when,q:pr.q,a:pr.a});
+    });
+  });
+  chunks.sort((a,b)=>b.score-a.score);
+  return chunks.slice(0,4).map(c=>'['+c.tag+'] Q: '+clip(c.q,200)+'\nA: '+clip(c.a,700)).join('\n\n');
+}
+async function coachSend(text){
+  coach.msgs.push({role:'user',content:text}); coach.busy=true; renderCoachMsgs();
+  try{
+    await loadCoachData(false);
+    const rules='You are a direct, practical communication coach for an MBA placement candidate. Use ONLY the data below and cite sessions as S1, S2 (S1 = newest). Give blunt, specific advice and one concrete drill when relevant. Keep answers under 180 words unless asked for more. Note: "confidence" is judged by an AI from the wording only (hedging vs decisive), not from voice; pace, fillers, pauses and pitch are measured separately, and fillers are probably under-counted. If the data cannot support an answer, say what is missing instead of guessing.\n\nDATA\n'+buildCoachDigest();
+    const hist=coach.msgs.slice(0,-1).filter(m=>!m.err).slice(-6);
+    while(hist.length&&hist[0].role!=='user') hist.shift();
+    const sn=coachSnippets(text);
+    const msgs=[{role:'user',content:rules},...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:(sn?'Relevant answer excerpts:\n'+sn+'\n\n':'')+'Question: '+text}];
+    const r=await askClaude(msgs,false,false);
+    coach.msgs.push({role:'assistant',content:r.text});
+  }catch(e){ coach.msgs.push({role:'assistant',content:'Error: '+e.message,err:true}); }
+  coach.busy=false; renderCoachMsgs();
+}
+function renderCoachMsgs(){
+  const box=document.getElementById('coach-msgs'); if(!box) return;
+  box.innerHTML=coach.msgs.map(m=>'<div class="bubble '+(m.role==='user'?'user':'ai')+(m.err?' err':'')+'">'+esc(m.content).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</div>').join('')+(coach.busy?'<div class="bubble ai">Thinking…</div>':'');
+  box.scrollTop=box.scrollHeight;
+  const b=document.getElementById('coach-send'); if(b) b.disabled=coach.busy;
+}
+function coachSubmit(){ const i=document.getElementById('coach-in'); const t=(i.value||'').trim(); if(!t||coach.busy) return; i.value=''; coachSend(t); }
+function coachAsk(n){ if(!coach.busy) coachSend(COACH_CHIPS[n]); }
+async function renderCoach(){
+  const el=document.getElementById('main');
+  if(!myProfile.is_admin){ el.innerHTML='<div class="card">Admins only.</div>'; return; }
+  el.innerHTML='<div class="card">Loading your data…</div>';
+  await loadCoachData(false);
+  const n=(coach.sessions||[]).length, tok=Math.round(buildCoachDigest().length/4);
+  el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Coach chat <span class="pill">admin only</span></h3><button class="sec mini" onclick="coach.sessions=null;coach.msgs=[];go('coach')">Refresh data</button></div>
+  <p class="hint">Knows your last ${Math.min(n,40)} sessions (scores, delivery metrics, feedback, growth themes) and pulls matching transcript excerpts only when your question needs them. About ${tok} tokens of context per message, so it never resends every transcript.</p>
+  <div class="row">${COACH_CHIPS.map((c,i)=>`<button class="sec mini" onclick="coachAsk(${i})">${esc(c)}</button>`).join('')}</div>
+  <div id="coach-msgs" class="chat-box"></div>
+  <div class="row" style="flex-wrap:nowrap"><textarea id="coach-in" rows="2" placeholder="Ask about your confidence, a weak area, what improved…" style="flex:1;min-height:44px"></textarea><button id="coach-send" onclick="coachSubmit()">Send</button></div></div>`;
+  document.getElementById('coach-in').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); coachSubmit(); } });
+  renderCoachMsgs();
 }
 
 // ---------- admin ----------
@@ -812,8 +1124,23 @@ async function renderAdmin(){
   if(!r.ok){ el.innerHTML=`<div class="card">${data.error}</div>`; return; }
   el.innerHTML=`<div class="card"><h3>Users (${data.users.length})</h3><table><tr><th>Email</th><th>Credits</th><th>Admin</th><th></th></tr>
   ${data.users.map(u=>`<tr><td>${u.email}</td><td>₹${Number(u.credits_inr).toFixed(2)}</td><td>${u.is_admin?'✅':''}</td>
-  <td><button class="sec" onclick="adminAdjust('${u.id}',1)">+ Credit</button> <button class="sec" onclick="adminAdjust('${u.id}',-1)">− Credit</button></td></tr>`).join('')}
+  <td><button class="sec" onclick="adminAdjust('${u.id}',1)">+ Credit</button> <button class="sec" onclick="adminAdjust('${u.id}',-1)">− Credit</button> <button class="sec" onclick="adminViewActivity('${u.id}')">Activity</button></td></tr>
+  <tr><td colspan="4"><div id="activity-${u.id}" style="display:none;padding:8px 0"></div></td></tr>`).join('')}
   </table></div>`;
+}
+async function adminViewActivity(userId){
+  const box=document.getElementById('activity-'+userId);
+  if(box.style.display==='block'){ box.style.display='none'; return; }
+  box.style.display='block'; box.innerHTML='<p class="hint">Loading…</p>';
+  const token=await authToken();
+  const r=await fetch('/api/admin?sessionsFor='+userId,{headers:{'Authorization':'Bearer '+token}});
+  const data=await r.json();
+  if(!r.ok){ box.innerHTML='<p class="hint">Failed to load.</p>'; return; }
+  const s=data.sessions||[];
+  box.innerHTML = s.length ? s.map(x=>`<div class="sess-row">
+    <div class="row" style="justify-content:space-between"><span>${new Date(x.createdAt).toLocaleDateString()} — ${esc(x.kind==='interview'?x.personaLabel:x.topic)}</span><span class="pill">${esc(x.overallScore)}/100</span></div>
+    <p class="hint" style="margin:4px 0">${esc(x.summary||'')}</p>
+  </div>`).join('') : '<p class="hint">No sessions yet.</p>';
 }
 async function adminAdjust(userId, sign){
   const amt=prompt((sign>0?"How much to ADD (₹)?":"How much to SUBTRACT (₹)?")+" e.g. 50");
@@ -832,6 +1159,7 @@ async function render(){
   else if(tab==='history') await renderHistory();
   else if(tab==='reads') await renderReads();
   else if(tab==='shl') renderSHL();
+  else if(tab==='coach') await renderCoach();
   else if(tab==='admin') await renderAdmin();
 }
 async function boot(){
