@@ -375,14 +375,15 @@ async function growthClusterAction(key,action){
 
 function buildNav(){
   const tabs=[["dashboard","Dashboard"],["interview","Interview"],["audio","Audio Analysis"],["bank","Persona"],["history","History"],["reads","Reads"],["shl","SHL Analysis"]];
-  if(myProfile?.is_admin){ tabs.push(["coach","Coach Chat"]); tabs.push(["admin","Admin"]); }
+  tabs.push(["coach","Coach Chat"]);
+  if(myProfile?.is_admin){ tabs.push(["admin","Admin"]); }
   document.getElementById('nav').innerHTML=tabs.map(t=>`<button class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
 }
 async function go(t){tab=t;buildNav();try{ await render(); }catch(e){ showFatal('This tab failed to load: '+(e.message||e)); }}
 
 // ---------- dashboard (home) ----------
 async function renderHome(){
-  const {data:s}=await supa.from('sessions').select('data').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
+  const {data:s}=await supa.from('sessions').select('data').eq('user_id',currentUser.id).neq('kind','coach_chat').order('created_at',{ascending:false}).limit(50);
   const sessions=(s||[]).map(r=>r.data);
   const days=[...new Set(sessions.map(x=>new Date(x.createdAt).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
   let streak=0,cur=new Date();
@@ -757,6 +758,7 @@ function renderAudio(){
     el.innerHTML=`<div class="card"><h3>Analysis — ${r.topic}</h3>
     <div class="metric">Overall ${r.overallScore}/100</div><div class="metric">Pace ${r.wpm} wpm</div><div class="metric">Fillers ${r.fillers}</div><div class="metric">Pauses ${r.pauseCount} (${r.pauseSec}s)</div><div class="metric">Pitch var ${r.pVar}Hz</div>
     <p>${r.summary||''}</p>
+    ${(r.nextTopics&&r.nextTopics.length)?`<b>Recommended topics to speak on next</b><div class="row" style="margin:6px 0">${r.nextTopics.map((t,i)=>`<button class="sec mini" onclick="aaUseTopic(${i},true)">${esc(t)}</button>`).join('')}</div>`:''}
     <button class="sec" style="margin:6px 0" onclick="document.getElementById('aa-tx').style.display='block';this.style.display='none'">📄 View transcript</button>
     <pre id="aa-tx" style="display:none">${r.transcript||''}</pre>
     ${r.recommendations?`<b>Recommendations</b><p>${r.recommendations}</p>`:`
@@ -768,11 +770,27 @@ function renderAudio(){
     return;
   }
   el.innerHTML=`<div class="card"><h3>Speak on a topic</h3>
-  <label>Topic (e.g. "Why should we hire you?")</label><input id="aa-topic" placeholder="Type a topic or question">
+  <label>Topic (e.g. "Why should we hire you?")</label><input id="aa-topic" placeholder="Type a topic or question" value="${esc(aa.prefill||'')}">
+  <div class="row" style="margin-top:8px"><button class="sec mini" onclick="aaSuggest()">💡 Suggest topics for me</button></div>
+  <div id="aa-sug" class="row" style="margin-top:6px">${(aa.sugg||[]).map((t,i)=>`<button class="sec mini" onclick="aaUseTopic(${i},false)">${esc(t)}</button>`).join('')}</div>
   <div class="row" style="margin-top:10px">
   <span id="rec-dot" style="display:${rec.active?'inline-block':'none'}"></span>
   <button id="aaBtn" onclick="aaToggle()">${rec.active?'Stop & Analyze':'Start Recording'}</button></div>
   <p id="live-t" class="hint" style="margin-top:8px"></p></div>`;
+}
+function aaUseTopic(i,fromResult){
+  const t=fromResult?aa.result.nextTopics[i]:aa.sugg[i];
+  aa={active:false,topic:'',sugg:aa.sugg||(aa.result&&aa.result.nextTopics)||[],prefill:t}; go('audio');
+}
+async function aaSuggest(){
+  const box=document.getElementById('aa-sug'); box.innerHTML='<span class="hint">Thinking…</span>';
+  try{
+    const {data}=await supa.from('sessions').select('data').eq('user_id',currentUser.id).neq('kind','coach_chat').order('created_at',{ascending:false}).limit(8);
+    const past=(data||[]).map(r=>r.data).map(x=>`${x.kind==='interview'?x.personaLabel:x.topic}: ${clip(x.summary,160)}`).join('\n');
+    const r=await askClaude(`Suggest 6 varied, specific topics or questions an MBA placement candidate can practice speaking on for 1-2 minutes. Target their weak spots and avoid repeating past topics.\nPast sessions:\n${past||'(none yet)'}\nJSON only: {"topics":["..."]}`,true);
+    aa.sugg=(r.topics||[]).slice(0,6); await refreshCredits();
+  }catch(e){ aa.sugg=[]; }
+  const keep=document.getElementById('aa-topic')?document.getElementById('aa-topic').value:''; aa.prefill=keep; renderAudio();
 }
 async function aaToggle(){
   if(!rec.active){
@@ -787,7 +805,7 @@ async function aaToggle(){
     document.getElementById('main').innerHTML='<div class="card">Analyzing…</div>';
     let fb={overallScore:60,summary:""};
     try{
-      fb=await askClaude(`You are a strict, honest coach — do not inflate scores. Give feedback on this spoken answer to "${aa.topic}":\n${(m.transcript||'(no transcript captured)').slice(0,4000)}\n\nJSON only: {"overallScore":0-100,"summary":"2-3 sentence honest feedback on content and delivery"}`,true);
+      fb=await askClaude(`You are a strict, honest coach — do not inflate scores. Give feedback on this spoken answer to "${aa.topic}":\n${(m.transcript||'(no transcript captured)').slice(0,4000)}\n\nJSON only: {"overallScore":0-100,"summary":"2-3 sentence honest feedback on content and delivery","nextTopics":["4 short, specific topics/questions to practice speaking on next, targeting the weaknesses seen here"]}`,true);
       fb={overallScore:60,summary:"",...fb};
     }catch(e){}
     const scores=scoreMetrics(m);
@@ -838,7 +856,7 @@ async function histGetRec(i){
 async function renderHistory(){
   const el=document.getElementById('main');
   el.innerHTML='<div class="card">Loading…</div>';
-  const {data}=await supa.from('sessions').select('id,data').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
+  const {data}=await supa.from('sessions').select('id,data').eq('user_id',currentUser.id).neq('kind','coach_chat').order('created_at',{ascending:false}).limit(50);
   const s=(data||[]).map(r=>({...r.data,_rowId:r.id}));
   histSessions=s;
   if(!s.length){ el.innerHTML='<div class="card">No sessions yet — do a mock interview or audio analysis first.</div>'; return; }
@@ -1034,11 +1052,33 @@ function renderLinksSection(items){
 }
 
 // ---------- admin-only coach chat (cheap context: compact digest + retrieved excerpts) ----------
-let coach={sessions:null,msgs:[],busy:false};
+let coach={sessions:null,msgs:[],busy:false,rowId:null,threads:[],used:0,limit:3,bonus:0};
+const COACH_DEFAULT_LIMIT=3;
+async function getCfg(kind,title){ const {data}=await supa.from('reads').select('id,body_text').eq('kind',kind).eq('title',title).limit(1); return data&&data[0]?data[0]:null; }
+async function setCfg(kind,title,val){ const row=await getCfg(kind,title); if(row) await supa.from('reads').update({body_text:String(val)}).eq('id',row.id); else await supa.from('reads').insert({kind,title,body_text:String(val),uploaded_by:currentUser.id}); }
+async function coachLoadMeta(){
+  const {data}=await supa.from('sessions').select('id,data,created_at').eq('user_id',currentUser.id).eq('kind','coach_chat').order('created_at',{ascending:false}).limit(60);
+  coach.threads=(data||[]).map(r=>({id:r.id,title:r.data.title||'Chat',msgs:r.data.msgs||[],ts:r.data.updatedAt||r.created_at}));
+  coach.used=coach.threads.reduce((n,t)=>n+t.msgs.filter(m=>m.role==='user').length,0);
+  const d=await getCfg('coach_config','default'), b=await getCfg('coach_quota',currentUser.id);
+  coach.limit=d&&!isNaN(d.body_text)?Number(d.body_text):COACH_DEFAULT_LIMIT;
+  coach.bonus=b&&!isNaN(b.body_text)?Number(b.body_text):0;
+}
+function coachLeft(){ return myProfile.is_admin?Infinity:Math.max(0,coach.limit+coach.bonus-coach.used); }
+async function coachSave(){
+  const msgs=coach.msgs.filter(m=>!m.err).map(m=>({role:m.role,content:m.content}));
+  const first=msgs.find(m=>m.role==='user');
+  const data={kind:'coach_chat',title:clip(first?first.content:'Chat',45),msgs,updatedAt:new Date().toISOString()};
+  if(coach.rowId){ await supa.from('sessions').update({data}).eq('id',coach.rowId); }
+  else{ const {data:row}=await supa.from('sessions').insert({user_id:currentUser.id,kind:'coach_chat',data}).select().single(); if(row) coach.rowId=row.id; }
+  await coachLoadMeta();
+}
+function coachOpen(i){ const t=coach.threads[i]; if(!t||coach.busy) return; coach.rowId=t.id; coach.msgs=t.msgs.map(m=>({...m})); renderCoach(true); }
+function coachNew(){ if(coach.busy) return; coach.rowId=null; coach.msgs=[]; renderCoach(true); }
 const COACH_CHIPS=['Where am I weakest on confidence?','Which weakness keeps repeating, and what drill fixes it?','What has improved over my last 5 sessions?','What do my fact errors have in common?'];
 async function loadCoachData(force){
   if(coach.sessions&&!force) return;
-  const {data}=await supa.from('sessions').select('data,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(40);
+  const {data}=await supa.from('sessions').select('data,created_at').eq('user_id',currentUser.id).neq('kind','coach_chat').order('created_at',{ascending:false}).limit(40);
   coach.sessions=(data||[]).map(r=>({...r.data,_ts:r.created_at}));
 }
 function avgOf(arr,k){ const v=arr.map(x=>x[k]).filter(n=>typeof n==='number'&&isFinite(n)); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
@@ -1078,6 +1118,7 @@ function coachSnippets(q){
   return chunks.slice(0,4).map(c=>'['+c.tag+'] Q: '+clip(c.q,200)+'\nA: '+clip(c.a,700)).join('\n\n');
 }
 async function coachSend(text){
+  if(coachLeft()<=0){ coach.msgs.push({role:'assistant',content:'You have used all your coach prompts. Ask the admin for more.',err:true}); renderCoachMsgs(); return; }
   coach.msgs.push({role:'user',content:text}); coach.busy=true; renderCoachMsgs();
   try{
     await loadCoachData(false);
@@ -1088,30 +1129,36 @@ async function coachSend(text){
     const msgs=[{role:'user',content:rules},...hist.map(m=>({role:m.role,content:m.content})),{role:'user',content:(sn?'Relevant answer excerpts:\n'+sn+'\n\n':'')+'Question: '+text}];
     const r=await askClaude(msgs,false,false);
     coach.msgs.push({role:'assistant',content:r.text});
-  }catch(e){ coach.msgs.push({role:'assistant',content:'Error: '+e.message,err:true}); }
-  coach.busy=false; renderCoachMsgs();
+    await coachSave();
+  }catch(e){ coach.msgs.pop(); coach.msgs.push({role:'assistant',content:'Error: '+e.message,err:true}); }
+  coach.busy=false; renderCoachMsgs(); renderCoachHead();
 }
 function renderCoachMsgs(){
   const box=document.getElementById('coach-msgs'); if(!box) return;
   box.innerHTML=coach.msgs.map(m=>'<div class="bubble '+(m.role==='user'?'user':'ai')+(m.err?' err':'')+'">'+esc(m.content).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</div>').join('')+(coach.busy?'<div class="bubble ai">Thinking…</div>':'');
   box.scrollTop=box.scrollHeight;
-  const b=document.getElementById('coach-send'); if(b) b.disabled=coach.busy;
+  const b=document.getElementById('coach-send'); if(b) b.disabled=coach.busy||coachLeft()<=0;
 }
 function coachSubmit(){ const i=document.getElementById('coach-in'); const t=(i.value||'').trim(); if(!t||coach.busy) return; i.value=''; coachSend(t); }
 function coachAsk(n){ if(!coach.busy) coachSend(COACH_CHIPS[n]); }
-async function renderCoach(){
+function renderCoachHead(){
+  const el=document.getElementById('coach-head'); if(!el) return;
+  const left=coachLeft();
+  el.innerHTML=myProfile.is_admin?'<span class="pill">unlimited</span>':`<span class="pill">${left} of ${coach.limit+coach.bonus} prompts left</span>`;
+  const b=document.getElementById('coach-send'); if(b) b.disabled=coach.busy||left<=0;
+}
+async function renderCoach(keep){
   const el=document.getElementById('main');
-  if(!myProfile.is_admin){ el.innerHTML='<div class="card">Admins only.</div>'; return; }
-  el.innerHTML='<div class="card">Loading your data…</div>';
-  await loadCoachData(false);
+  if(!keep){ el.innerHTML='<div class="card">Loading your data…</div>'; await loadCoachData(false); await coachLoadMeta(); }
   const n=(coach.sessions||[]).length, tok=Math.round(buildCoachDigest().length/4);
-  el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Coach chat <span class="pill">admin only</span></h3><button class="sec mini" onclick="coach.sessions=null;coach.msgs=[];go('coach')">Refresh data</button></div>
-  <p class="hint">Knows your last ${Math.min(n,40)} sessions (scores, delivery metrics, feedback, growth themes) and pulls matching transcript excerpts only when your question needs them. About ${tok} tokens of context per message, so it never resends every transcript.</p>
+  el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Coach chat <span id="coach-head"></span></h3><div class="row"><button class="sec mini" onclick="coachNew()">+ New chat</button><button class="sec mini" onclick="coach.sessions=null;go('coach')">Refresh data</button></div></div>
+  <p class="hint">Knows your last ${Math.min(n,40)} sessions (scores, delivery metrics, feedback, growth themes) and pulls matching transcript excerpts only when your question needs them. About ${tok} tokens of context per message.</p>
+  ${coach.threads.length?`<details style="margin:8px 0"><summary class="hint" style="cursor:pointer">Chat history (${coach.threads.length})</summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${coach.threads.map((t,i)=>`<button class="sec mini" style="text-align:left;${t.id===coach.rowId?'border-color:var(--accent)':''}" onclick="coachOpen(${i})">${esc(t.title)} <span class="hint">· ${new Date(t.ts).toLocaleDateString()} · ${t.msgs.filter(m=>m.role==='user').length} prompt(s)</span></button>`).join('')}</div></details>`:''}
   <div class="row">${COACH_CHIPS.map((c,i)=>`<button class="sec mini" onclick="coachAsk(${i})">${esc(c)}</button>`).join('')}</div>
   <div id="coach-msgs" class="chat-box"></div>
   <div class="row" style="flex-wrap:nowrap"><textarea id="coach-in" rows="2" placeholder="Ask about your confidence, a weak area, what improved…" style="flex:1;min-height:44px"></textarea><button id="coach-send" onclick="coachSubmit()">Send</button></div></div>`;
   document.getElementById('coach-in').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); coachSubmit(); } });
-  renderCoachMsgs();
+  renderCoachMsgs(); renderCoachHead();
 }
 
 // ---------- admin ----------
@@ -1122,10 +1169,14 @@ async function renderAdmin(){
   const r=await fetch('/api/admin',{headers:{'Authorization':'Bearer '+token}});
   const data=await r.json();
   if(!r.ok){ el.innerHTML=`<div class="card">${data.error}</div>`; return; }
-  el.innerHTML=`<div class="card"><h3>Users (${data.users.length})</h3><table><tr><th>Email</th><th>Credits</th><th>Admin</th><th></th></tr>
-  ${data.users.map(u=>`<tr><td>${u.email}</td><td>₹${Number(u.credits_inr).toFixed(2)}</td><td>${u.is_admin?'✅':''}</td>
+  const def=await getCfg('coach_config','default'); const defN=def&&!isNaN(def.body_text)?Number(def.body_text):COACH_DEFAULT_LIMIT;
+  const {data:qs}=await supa.from('reads').select('title,body_text').eq('kind','coach_quota').limit(1000);
+  const qm={}; (qs||[]).forEach(q=>{ qm[q.title]=Number(q.body_text)||0; });
+  el.innerHTML=`<div class="card"><h3>Coach chat prompts</h3><div class="row"><span>Default prompts per user: <b>${defN}</b></span><button class="sec mini" onclick="adminCoachDefault(-1)">− 1</button><button class="sec mini" onclick="adminCoachDefault(1)">+ 1</button></div><p class="hint">Admins are unlimited. Use the per-user buttons below to give someone extra prompts or take them away.</p></div>
+  <div class="card"><h3>Users (${data.users.length})</h3><table><tr><th>Email</th><th>Credits</th><th>Admin</th><th>Coach prompts</th><th></th></tr>
+  ${data.users.map(u=>`<tr><td>${u.email}</td><td>₹${Number(u.credits_inr).toFixed(2)}</td><td>${u.is_admin?'✅':''}</td><td>${Math.max(0,defN+(qm[u.id]||0))} <button class="sec mini" onclick="adminCoachUser('${u.id}',-1)">−</button> <button class="sec mini" onclick="adminCoachUser('${u.id}',1)">+</button></td>
   <td><button class="sec" onclick="adminAdjust('${u.id}',1)">+ Credit</button> <button class="sec" onclick="adminAdjust('${u.id}',-1)">− Credit</button> <button class="sec" onclick="adminViewActivity('${u.id}')">Activity</button></td></tr>
-  <tr><td colspan="4"><div id="activity-${u.id}" style="display:none;padding:8px 0"></div></td></tr>`).join('')}
+  <tr><td colspan="5"><div id="activity-${u.id}" style="display:none;padding:8px 0"></div></td></tr>`).join('')}
   </table></div>`;
 }
 async function adminViewActivity(userId){
@@ -1141,6 +1192,14 @@ async function adminViewActivity(userId){
     <div class="row" style="justify-content:space-between"><span>${new Date(x.createdAt).toLocaleDateString()} — ${esc(x.kind==='interview'?x.personaLabel:x.topic)}</span><span class="pill">${esc(x.overallScore)}/100</span></div>
     <p class="hint" style="margin:4px 0">${esc(x.summary||'')}</p>
   </div>`).join('') : '<p class="hint">No sessions yet.</p>';
+}
+async function adminCoachDefault(d){
+  const row=await getCfg('coach_config','default'); const cur=row&&!isNaN(row.body_text)?Number(row.body_text):COACH_DEFAULT_LIMIT;
+  await setCfg('coach_config','default',Math.max(0,cur+d)); await renderAdmin();
+}
+async function adminCoachUser(id,d){
+  const row=await getCfg('coach_quota',id); const cur=row&&!isNaN(row.body_text)?Number(row.body_text):0;
+  await setCfg('coach_quota',id,cur+d); await renderAdmin();
 }
 async function adminAdjust(userId, sign){
   const amt=prompt((sign>0?"How much to ADD (₹)?":"How much to SUBTRACT (₹)?")+" e.g. 50");
