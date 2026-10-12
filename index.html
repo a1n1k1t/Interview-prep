@@ -88,11 +88,19 @@ pre{white-space:pre-wrap;font-size:12px;background:var(--panel-alt);padding:10px
 .gc-body{padding:2px 0 10px 14px}
 .gc-item{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:6px 0}
 button.mini,.mini{padding:4px 9px;font-size:11px;border-radius:8px}
-.chat-box{max-height:420px;min-height:120px;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column;gap:8px}
-.bubble{max-width:88%;padding:10px 13px;border-radius:var(--radius-sm);white-space:pre-wrap;font-size:14px;line-height:1.5}
-.bubble.user{background:var(--accent-soft);margin-left:auto}
-.bubble.ai{background:var(--panel-alt);border:1px solid var(--border)}
-.bubble.err{background:var(--danger-soft);color:#991b1b}
+.chat-box{min-height:300px;max-height:58vh;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column;gap:10px;background:var(--panel-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px}
+.chat-empty{margin:auto;text-align:center;color:var(--muted);font-size:14px;padding:20px}
+.bubble{max-width:90%;padding:11px 14px;border-radius:14px;white-space:pre-wrap;font-size:15px;line-height:1.55}
+.bubble .who{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.75;margin-bottom:3px}
+.bubble.user{background:var(--accent);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+.bubble.ai{background:#fff;color:var(--text);border:1px solid var(--border);box-shadow:var(--shadow);border-bottom-left-radius:4px}
+.bubble.err{background:var(--danger-soft);color:#991b1b;border:1px solid #fecaca}
+.coach-layout{display:grid;grid-template-columns:210px 1fr;gap:14px;margin-top:10px}
+.coach-side{max-height:62vh;overflow-y:auto}
+.thread{padding:9px 11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--panel);margin-bottom:6px;font-size:13px;font-weight:600;cursor:pointer}
+.thread small{display:block;color:var(--muted);font-weight:500;margin-top:2px}
+.thread.on{border-color:var(--accent);background:var(--accent-soft)}
+@media(max-width:700px){.coach-layout{grid-template-columns:1fr}.coach-side{max-height:170px}}
 .link-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
 .link-item:last-child{border-bottom:none}
 .link-title{font-weight:700;color:var(--accent);text-decoration:none;word-break:break-word}
@@ -108,6 +116,7 @@ a.link-title:hover{text-decoration:underline}
     <label>Email</label><input id="auth-email" type="email">
     <label>Password</label><input id="auth-pass" type="password">
     <div class="row" style="margin-top:10px"><button onclick="doSignIn()">Sign in</button><button class="sec" onclick="doSignUp()">Create account</button></div>
+    <p style="margin:8px 0 0"><a href="#" onclick="doForgot();return false" style="font-size:13px;color:var(--accent);font-weight:600">Forgot password?</a></p>
     <p id="auth-err" style="color:var(--danger);font-size:13px"></p>
   </div>
 </div>
@@ -154,7 +163,10 @@ if(SUPABASE_URL.includes('YOUR_SUPABASE_URL') || SUPABASE_ANON_KEY.includes('YOU
 if(!/^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(SUPABASE_URL.trim())){
   throw new Error('SUPABASE_URL looks malformed: "'+SUPABASE_URL+'" — it should look exactly like https://xxxxxxxx.supabase.co with nothing before or after it (no /rest/v1, no trailing text).');
 }
+const recoveryFromUrl=/type=recovery/.test(location.hash+location.search);
+const expiredLink=/error_code=otp_expired/.test(location.hash+location.search);
 const supa = supabase.createClient(SUPABASE_URL.trim(), SUPABASE_ANON_KEY.trim());
+supa.auth.onAuthStateChange(ev=>{ if(ev==='PASSWORD_RECOVERY') showResetForm(); });
 
 let currentUser=null, myProfile=null;
 let personas=[]; let tab='dashboard'; let editingPersonaId=null;
@@ -182,6 +194,30 @@ async function doSignUp(){
   if(error){ document.getElementById('auth-err').style.color='var(--danger)'; document.getElementById('auth-err').textContent=error.message; return; }
   document.getElementById('auth-err').style.color='var(--emerald)';
   document.getElementById('auth-err').textContent='Account created. If email confirmation is on, check your inbox, then sign in.';
+}
+async function doForgot(){
+  const err=document.getElementById('auth-err');
+  const email=document.getElementById('auth-email').value.trim();
+  if(!email){ err.style.color='var(--danger)'; err.textContent='Type your email in the box above first, then tap "Forgot password?".'; return; }
+  const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  if(error){ err.style.color='var(--danger)'; err.textContent=error.message; return; }
+  err.style.color='var(--emerald)';
+  err.textContent='If that email has an account, a reset link is on its way. Open it on this device and you can set a new password.';
+}
+function showResetForm(){
+  document.getElementById('appScreen').style.display='none';
+  const a=document.getElementById('authScreen'); a.style.display='block';
+  a.innerHTML='<div class="card" style="max-width:380px;margin:70px auto"><h3 style="margin-top:0">Set a new password</h3><label>New password</label><input id="rp-1" type="password"><label>Confirm new password</label><input id="rp-2" type="password"><div class="row" style="margin-top:10px"><button onclick="doResetPassword()">Save password</button></div><p id="rp-err" style="font-size:13px;color:var(--danger)"></p></div>';
+}
+async function doResetPassword(){
+  const err=document.getElementById('rp-err');
+  const p1=document.getElementById('rp-1').value, p2=document.getElementById('rp-2').value;
+  if(p1.length<6){ err.textContent='Password must be at least 6 characters.'; return; }
+  if(p1!==p2){ err.textContent='The two passwords do not match.'; return; }
+  const {error}=await supa.auth.updateUser({password:p1});
+  if(error){ err.textContent=error.message; return; }
+  history.replaceState(null,'',location.pathname);
+  location.reload();
 }
 async function doSignOut(){ await supa.auth.signOut(); location.reload(); }
 
@@ -374,7 +410,7 @@ async function growthClusterAction(key,action){
 }
 
 function buildNav(){
-  const tabs=[["dashboard","Dashboard"],["interview","Interview"],["audio","Audio Analysis"],["bank","Persona"],["history","History"],["reads","Reads"],["shl","SHL Analysis"]];
+  const tabs=[["dashboard","Dashboard"],["interview","Interview"],["audio","Audio Analysis"],["bank","Persona"],["about","About Me"],["history","History"],["reads","Reads"]];
   tabs.push(["coach","Coach Chat"]);
   if(myProfile?.is_admin){ tabs.push(["admin","Admin"]); }
   document.getElementById('nav').innerHTML=tabs.map(t=>`<button class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
@@ -563,7 +599,7 @@ function scoreMetrics(m){
 
 // ---------- mock interview ----------
 function toughLabel(id){ return {gentle:'Easy',realistic:'Mid',tough:'Tough'}[id]||id; }
-function buildRules(p, toughnessId, mode){
+function buildRules(p, toughnessId, mode, about){
   const level = toughnessId || p.toughness || 'realistic';
   const tone={
     gentle:"DIFFICULTY: Easy. Tone: warm and encouraging — but still ask substantive questions and expect real answers; do not make this trivially easy or skip follow-ups. Give the candidate room to recover from a shaky start before pushing further.",
@@ -580,10 +616,13 @@ FULL INTERVIEW STRUCTURE — this is a "Full Interview": simulate the complete a
 - Never spend more than 3 questions total in this rapport/bridging phase before you're fully into role-specific territory — the transcript so far tells you how many questions have already happened.` : `
 
 HALF INTERVIEW — start directly with role-specific questions per the framework below; skip general rapport-building, this session goes straight to substance.`;
+  const aboutBlock=about?`
+
+CANDIDATE BACKGROUND (self-written by the candidate, treat as unverified claims). Use it to personalise: ask about specific items on it, probe the weaknesses they admit, and tailor difficulty to their stated strengths. Never read it back verbatim or invent facts that are not in it. In a Full Interview, use it to ask about something interesting that is NOT already obvious from it.\n${about}`:'';
   return `You are role-playing as an experienced human interviewer/recruiter for the role of ${p.role} ${p.company?"at "+p.company:""}.
 ${p.jdText?"Job description / round notes:\n"+p.jdText+"\n":""}
 ${tone}
-${fullModeBlock}
+${fullModeBlock}${aboutBlock}
 
 HOW TO CONDUCT THE ROLE-SPECIFIC PART OF THIS INTERVIEW:
 - Make each role-specific question open-ended — invite a substantive answer, not a yes/no.
@@ -594,13 +633,14 @@ HOW TO CONDUCT THE ROLE-SPECIFIC PART OF THIS INTERVIEW:
 }
 function changeToughness(level){
   iv.toughness=level;
-  iv.turns[0]={role:"user",content:buildRules(iv.persona,level,iv.mode)+"\n[Note: the candidate just changed the difficulty to '"+toughLabel(level)+"' mid-interview — apply this from your NEXT question onward.]"};
+  iv.turns[0]={role:"user",content:buildRules(iv.persona,level,iv.mode,iv.about)+"\n[Note: the candidate just changed the difficulty to '"+toughLabel(level)+"' mid-interview — apply this from your NEXT question onward.]"};
   renderInterview();
 }
-async function beginInterview(personaId, mode){
+async function beginInterview(personaId, mode, useAbout){
   const p=personas.find(x=>x.id===personaId); if(!p) return;
   const lvl=p.toughness||'realistic';
-  iv={active:true,persona:p,toughness:lvl,mode:mode||'half',turns:[{role:"user",content:buildRules(p,lvl,mode)+"\nAsk your first question now."}],qn:0,lastMetrics:[],error:null};
+  const about=useAbout?aboutForPrompt():'';
+  iv={active:true,persona:p,toughness:lvl,mode:mode||'half',about,turns:[{role:"user",content:buildRules(p,lvl,mode,about)+"\nAsk your first question now."}],qn:0,lastMetrics:[],error:null};
   renderInterview(); await askQuestion();
 }
 async function askQuestion(){
@@ -725,7 +765,8 @@ function renderInterview(thinking){
       <option value="full">Full Interview — opens with "tell me about yourself," then bridges into the role</option>
       <option value="half">Half Interview — goes straight into role-specific questions</option>
     </select>
-    <div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value,document.getElementById('modeSel').value)">Start</button></div>`:'<p class="hint">Create a persona in the Persona tab first.</p>'}
+    ${aboutHasContent(aboutMe)?'<label style="margin-top:10px"><input type="checkbox" id="useAbout" checked> Personalise with About Me <span class="hint">(adds ~'+Math.round(aboutForPrompt().length/4)+' tokens per question)</span></label>':'<p class="hint" style="margin-top:10px">Tip: fill in the About Me tab to get questions tailored to your CV.</p>'}
+    <div class="row" style="margin-top:10px"><button onclick="beginInterview(document.getElementById('pSel').value,document.getElementById('modeSel').value,!!(document.getElementById('useAbout')&&document.getElementById('useAbout').checked))">Start</button></div>`:'<p class="hint">Create a persona in the Persona tab first.</p>'}
     </div>`;
     return;
   }
@@ -844,7 +885,16 @@ function renderSessionRow(x,i){
       ${x.recommendations?`<b>Recommendations</b><p>${x.recommendations}</p>`:`
       <div class="row" style="margin-top:8px"><label class="hint"><input type="checkbox" id="srch-${i}"> search web</label>
       <button class="sec" onclick="histGetRec(${i})">Get recommendations</button></div>`}
+      <div class="row" style="margin-top:10px"><button class="sec mini" style="color:#991b1b" onclick="deleteSession(${i})">🗑 Delete this session</button></div>
     </div></div>`;
+}
+async function deleteSession(i){
+  const x=histSessions[i]; if(!x||!x._rowId) return;
+  if(!confirm('Delete this session permanently? Your averages and charts will update. Growth areas already recorded from it stay until you ignore or delete them.')) return;
+  const {data,error}=await supa.from('sessions').delete().eq('id',x._rowId).select();
+  if(error){ alert('Could not delete: '+error.message); return; }
+  if(!data||!data.length){ alert('Delete was blocked. Run the delete-permission SQL step in Supabase first.'); return; }
+  await renderHistory();
 }
 function toggleDetail(i){ const el=document.getElementById('detail-'+i); el.style.display=el.style.display==='none'?'block':'none'; }
 async function histGetRec(i){
@@ -1008,9 +1058,6 @@ async function renderReads(){
     renderTwoMinSection(twoMin) +
     renderLinksSection(links);
 }
-function renderSHL(){
-  document.getElementById('main').innerHTML=`<div class="card"><h3>SHL Report Analysis</h3><div class="stub">Upload your SHL assessment PDF for a full breakdown and areas to work on.<br><b>Coming soon.</b></div></div>`;
-}
 
 // ---------- Reads: links (admin adds, everyone can open) ----------
 let linksCache=[];
@@ -1122,7 +1169,7 @@ async function coachSend(text){
   coach.msgs.push({role:'user',content:text}); coach.busy=true; renderCoachMsgs();
   try{
     await loadCoachData(false);
-    const rules='You are a direct, practical communication coach for an MBA placement candidate. Use ONLY the data below and cite sessions as S1, S2 (S1 = newest). Give blunt, specific advice and one concrete drill when relevant. Keep answers under 180 words unless asked for more. Note: "confidence" is judged by an AI from the wording only (hedging vs decisive), not from voice; pace, fillers, pauses and pitch are measured separately, and fillers are probably under-counted. If the data cannot support an answer, say what is missing instead of guessing.\n\nDATA\n'+buildCoachDigest();
+    const rules='You are a direct, practical communication coach for an MBA placement candidate. Use ONLY the data below and cite sessions as S1, S2 (S1 = newest). Give blunt, specific advice and one concrete drill when relevant. Keep answers under 180 words unless asked for more. Note: "confidence" is judged by an AI from the wording only (hedging vs decisive), not from voice; pace, fillers, pauses and pitch are measured separately, and fillers are probably under-counted. If the data cannot support an answer, say what is missing instead of guessing.\n\nDATA\n'+buildCoachDigest()+(aboutForPrompt()?'\n\nABOUT THE CANDIDATE (self-written)\n'+clip(aboutForPrompt(),1500):'');
     const hist=coach.msgs.slice(0,-1).filter(m=>!m.err).slice(-6);
     while(hist.length&&hist[0].role!=='user') hist.shift();
     const sn=coachSnippets(text);
@@ -1135,7 +1182,9 @@ async function coachSend(text){
 }
 function renderCoachMsgs(){
   const box=document.getElementById('coach-msgs'); if(!box) return;
-  box.innerHTML=coach.msgs.map(m=>'<div class="bubble '+(m.role==='user'?'user':'ai')+(m.err?' err':'')+'">'+esc(m.content).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</div>').join('')+(coach.busy?'<div class="bubble ai">Thinking…</div>':'');
+  box.innerHTML=(coach.msgs.length||coach.busy?'':'<div class="chat-empty">Ask a question, or tap one of the suggestions above.</div>')+
+    coach.msgs.map(m=>'<div class="bubble '+(m.role==='user'?'user':'ai')+(m.err?' err':'')+'"><span class="who">'+(m.role==='user'?'You':'Coach')+'</span>'+esc(m.content).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</div>').join('')+
+    (coach.busy?'<div class="bubble ai"><span class="who">Coach</span>Thinking…</div>':'');
   box.scrollTop=box.scrollHeight;
   const b=document.getElementById('coach-send'); if(b) b.disabled=coach.busy||coachLeft()<=0;
 }
@@ -1151,14 +1200,77 @@ async function renderCoach(keep){
   const el=document.getElementById('main');
   if(!keep){ el.innerHTML='<div class="card">Loading your data…</div>'; await loadCoachData(false); await coachLoadMeta(); }
   const n=(coach.sessions||[]).length, tok=Math.round(buildCoachDigest().length/4);
-  el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Coach chat <span id="coach-head"></span></h3><div class="row"><button class="sec mini" onclick="coachNew()">+ New chat</button><button class="sec mini" onclick="coach.sessions=null;go('coach')">Refresh data</button></div></div>
-  <p class="hint">Knows your last ${Math.min(n,40)} sessions (scores, delivery metrics, feedback, growth themes) and pulls matching transcript excerpts only when your question needs them. About ${tok} tokens of context per message.</p>
-  ${coach.threads.length?`<details style="margin:8px 0"><summary class="hint" style="cursor:pointer">Chat history (${coach.threads.length})</summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${coach.threads.map((t,i)=>`<button class="sec mini" style="text-align:left;${t.id===coach.rowId?'border-color:var(--accent)':''}" onclick="coachOpen(${i})">${esc(t.title)} <span class="hint">· ${new Date(t.ts).toLocaleDateString()} · ${t.msgs.filter(m=>m.role==='user').length} prompt(s)</span></button>`).join('')}</div></details>`:''}
-  <div class="row">${COACH_CHIPS.map((c,i)=>`<button class="sec mini" onclick="coachAsk(${i})">${esc(c)}</button>`).join('')}</div>
-  <div id="coach-msgs" class="chat-box"></div>
-  <div class="row" style="flex-wrap:nowrap"><textarea id="coach-in" rows="2" placeholder="Ask about your confidence, a weak area, what improved…" style="flex:1;min-height:44px"></textarea><button id="coach-send" onclick="coachSubmit()">Send</button></div></div>`;
+  const side=coach.threads.length?coach.threads.map((t,i)=>'<div class="thread'+(t.id===coach.rowId?' on':'')+'" onclick="coachOpen('+i+')">'+esc(t.title)+'<small>'+new Date(t.ts).toLocaleDateString()+' · '+t.msgs.filter(m=>m.role==='user').length+' prompt(s)</small></div>').join(''):'<p class="hint">No saved chats yet. Your conversations will appear here.</p>';
+  el.innerHTML='<div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Coach chat <span id="coach-head"></span></h3><div class="row"><button class="sec mini" onclick="coachNew()">+ New chat</button><button class="sec mini" onclick="coach.sessions=null;go(\'coach\')">Refresh data</button></div></div>'+
+  '<p class="hint">Knows your last '+Math.min(n,40)+' sessions (scores, delivery metrics, feedback, growth themes) and pulls matching transcript excerpts only when your question needs them. About '+tok+' tokens of context per message.</p>'+
+  '<div class="coach-layout"><div class="coach-side"><b style="font-size:13px">Your chats ('+coach.threads.length+')</b><div style="margin-top:6px">'+side+'</div></div>'+
+  '<div><div class="row">'+COACH_CHIPS.map((c,i)=>'<button class="sec mini" onclick="coachAsk('+i+')">'+esc(c)+'</button>').join('')+'</div>'+
+  '<div id="coach-msgs" class="chat-box"></div>'+
+  '<div class="row" style="flex-wrap:nowrap"><textarea id="coach-in" rows="2" placeholder="Ask about your confidence, a weak area, what improved…" style="flex:1;min-height:44px"></textarea><button id="coach-send" onclick="coachSubmit()">Send</button></div></div></div></div>';
   document.getElementById('coach-in').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); coachSubmit(); } });
   renderCoachMsgs(); renderCoachHead();
+}
+
+// ---------- About Me (text profile used to personalise interviews and the coach) ----------
+let aboutMe=null, aboutErr=null;
+const ABOUT_LIMITS={cv_text:2500,strengths:600,weaknesses:600,other:400};
+async function loadAbout(){
+  const {data,error}=await supa.from('about_me').select('*').eq('user_id',currentUser.id).maybeSingle();
+  if(error){ aboutErr=error.message; aboutMe=null; return; }
+  aboutErr=null; aboutMe=data||null;
+}
+function aboutHasContent(a){ return !!(a&&(a.cv_text||a.strengths||a.weaknesses||a.other)); }
+function aboutForPrompt(){
+  const a=aboutMe; if(!aboutHasContent(a)) return '';
+  if(a.brief) return a.brief;
+  const parts=[];
+  if(a.cv_text) parts.push('Background/CV: '+clip(a.cv_text,1500));
+  if(a.strengths) parts.push('Strengths: '+clip(a.strengths,400));
+  if(a.weaknesses) parts.push('Weaknesses: '+clip(a.weaknesses,400));
+  if(a.other) parts.push('Other: '+clip(a.other,300));
+  return parts.join('\n');
+}
+function aboutCount(id,lim){ const t=document.getElementById('ab-'+id), c=document.getElementById('cnt-'+id); if(t&&c) c.textContent=t.value.length+'/'+lim; }
+function aboutMsg(t,bad){ const m=document.getElementById('ab-msg'); if(m){ m.textContent=t; m.style.color=bad?'var(--danger)':'var(--muted)'; } }
+async function saveAbout(quiet){
+  const row={user_id:currentUser.id,updated_at:new Date().toISOString(),brief:null};
+  Object.keys(ABOUT_LIMITS).forEach(k=>{ row[k]=document.getElementById('ab-'+k).value.trim().slice(0,ABOUT_LIMITS[k]); });
+  const {error}=await supa.from('about_me').upsert(row,{onConflict:'user_id'});
+  if(error){ aboutMsg('Could not save: '+error.message,true); return false; }
+  aboutMe=row;
+  if(!quiet) aboutMsg('Saved.');
+  return true;
+}
+async function condenseAbout(){
+  if(!(await saveAbout(true))) return;
+  if(!aboutHasContent(aboutMe)){ aboutMsg('Write something first.',true); return; }
+  aboutMsg('Condensing…');
+  const raw=['CV/background: '+aboutMe.cv_text,'Strengths: '+aboutMe.strengths,'Weaknesses: '+aboutMe.weaknesses,'Other: '+aboutMe.other].join('\n');
+  try{
+    const r=await askClaude('Condense this candidate profile into at most 150 words for an interviewer. Keep concrete facts (education, employers, roles, projects, numbers, certifications), strengths, weaknesses and goals. Third person, no fluff, no opinions. Output only the text.\n\n'+raw,false,false);
+    const brief=clip(r.text,1200);
+    const {error}=await supa.from('about_me').update({brief}).eq('user_id',currentUser.id);
+    if(error) throw new Error(error.message);
+    aboutMe.brief=brief; await refreshCredits(); renderAbout();
+  }catch(e){ aboutMsg('Could not condense: '+e.message,true); }
+}
+async function renderAbout(){
+  const el=document.getElementById('main');
+  if(aboutErr){ el.innerHTML='<div class="card"><h3>About Me</h3><p class="hint">This page needs its database table first (see the SQL step). Details: '+esc(aboutErr)+'</p></div>'; return; }
+  const a=aboutMe||{};
+  const f=(id,label,ph)=>'<label>'+label+' <span class="hint" id="cnt-'+id+'"></span></label><textarea id="ab-'+id+'" maxlength="'+ABOUT_LIMITS[id]+'" placeholder="'+ph+'" oninput="aboutCount(\''+id+'\','+ABOUT_LIMITS[id]+')" style="min-height:'+(id==='cv_text'?150:80)+'px">'+esc(a[id]||'')+'</textarea>';
+  const tok=Math.round(aboutForPrompt().length/4);
+  el.innerHTML='<div class="card"><h3>About Me</h3>'+
+  '<p class="hint">Paste text, not a PDF. Text is tiny to store and cheaper to use than a PDF, and you can trim it. Only you can see this page. If you only have a PDF, open it, select all, copy, and paste here.</p>'+
+  f('cv_text','CV / background','Education, internships, projects, certifications, achievements…')+
+  f('strengths','My strengths','What you are genuinely good at…')+
+  f('weaknesses','What I struggle with or want to improve','Be honest, interviews will probe this…')+
+  f('other','Anything else','Target roles, topics you want to be probed on…')+
+  '<div class="row" style="margin-top:10px"><button onclick="saveAbout()">Save</button><button class="sec" onclick="condenseAbout()">Condense for interviews</button></div>'+
+  '<p id="ab-msg" class="hint"></p>'+
+  '<p class="hint">Interviews can use this to ask about your actual CV. It adds about '+tok+' tokens per question'+(a.brief?' (condensed version).':'. "Condense" makes a short version once (one small AI call) so every interview costs less.')+' You can turn it off per interview.</p>'+
+  (a.brief?'<b>Condensed version used in interviews</b><pre>'+esc(a.brief)+'</pre>':'')+'</div>';
+  Object.keys(ABOUT_LIMITS).forEach(k=>aboutCount(k,ABOUT_LIMITS[k]));
 }
 
 // ---------- admin ----------
@@ -1187,7 +1299,7 @@ async function adminViewActivity(userId){
   const r=await fetch('/api/admin?sessionsFor='+userId,{headers:{'Authorization':'Bearer '+token}});
   const data=await r.json();
   if(!r.ok){ box.innerHTML='<p class="hint">Failed to load.</p>'; return; }
-  const s=data.sessions||[];
+  const s=(data.sessions||[]).filter(x=>x.kind!=='coach_chat');
   box.innerHTML = s.length ? s.map(x=>`<div class="sess-row">
     <div class="row" style="justify-content:space-between"><span>${new Date(x.createdAt).toLocaleDateString()} — ${esc(x.kind==='interview'?x.personaLabel:x.topic)}</span><span class="pill">${esc(x.overallScore)}/100</span></div>
     <p class="hint" style="margin:4px 0">${esc(x.summary||'')}</p>
@@ -1217,14 +1329,15 @@ async function render(){
   else if(tab==='bank') renderBank();
   else if(tab==='history') await renderHistory();
   else if(tab==='reads') await renderReads();
-  else if(tab==='shl') renderSHL();
+  else if(tab==='about') await renderAbout();
   else if(tab==='coach') await renderCoach();
   else if(tab==='admin') await renderAdmin();
 }
 async function boot(){
   try{
+    if(recoveryFromUrl){ showResetForm(); return; }
     const {data:{session}}=await supa.auth.getSession();
-    if(!session){ document.getElementById('authScreen').style.display='block'; document.getElementById('appScreen').style.display='none'; return; }
+    if(!session){ document.getElementById('authScreen').style.display='block'; document.getElementById('appScreen').style.display='none'; if(expiredLink){ const e=document.getElementById('auth-err'); if(e) e.textContent='That reset link has expired. Tap "Forgot password?" to get a new one.'; } return; }
     currentUser=session.user;
     await refreshCredits();
     if(!myProfile) return; // refreshCredits already showed a fatal banner explaining why
@@ -1232,7 +1345,7 @@ async function boot(){
     document.getElementById('appScreen').style.display='block';
     document.getElementById('voiceBtn').textContent=voiceOn?'🔊 On':'🔊 Off';
     document.getElementById('voiceSel').value=voiceName;
-    buildNav(); await loadPersonas(); await render();
+    buildNav(); await loadPersonas(); try{ await loadAbout(); }catch(e){} await render();
   }catch(e){
     showFatal('Startup failed: '+(e.message||e));
     document.getElementById('authScreen').style.display='block';
