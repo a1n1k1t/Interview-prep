@@ -1,33 +1,44 @@
-import { createClient } from '@supabase/supabase-js';
+// POST /api/speak  Body: { text, voice }
+// Turns the interviewer's question into speech with Google Cloud Text-to-Speech.
+// Signed-in users only, so nobody else can use your Google key.
+const { send, fail, readBody, requireUser, httpError } = require('../lib/shared');
 
-const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const VOICES = new Set([
+  'en-IN-Wavenet-B', 'en-IN-Wavenet-C', 'en-IN-Wavenet-F', // Indian English, male
+  'en-IN-Wavenet-A', 'en-IN-Wavenet-D', 'en-IN-Wavenet-E', // Indian English, female
+  'en-US-Wavenet-D', 'en-US-Wavenet-F',                    // US English, male / female
+  'en-GB-Wavenet-B', 'en-GB-Wavenet-F',                    // UK English, male / female
+]);
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
-
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  const { data: userData } = await admin.auth.getUser(token);
-  if (!userData?.user) return res.status(401).json({ error: 'Not signed in' });
-
-  const { text, voice } = req.body || {};
-  if (!text) return res.status(400).json({ error: 'Missing text' });
-
+module.exports = async function handler(req, res) {
+  if (req.method !== 'POST') return send(res, 405, { error: 'Use POST.' });
   try {
-    const r = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${process.env.GOOGLE_TTS_API_KEY}`, {
+    await requireUser(req);
+    const key = process.env.GOOGLE_TTS_API_KEY;
+    if (!key) throw httpError(503, 'Voice is not set up on the server (GOOGLE_TTS_API_KEY is missing).');
+    const body = await readBody(req);
+    const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 700);
+    if (!text) throw httpError(400, 'Nothing to read aloud.');
+    const voice = VOICES.has(body.voice) ? body.voice : 'en-IN-Wavenet-B';
+    const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(key), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        input: { text: text.slice(0, 600) },
-        voice: { languageCode: 'en-US', name: voice || 'en-US-Wavenet-D' },
-        audioConfig: { audioEncoding: 'MP3' }
-      })
+        input: { text },
+        voice: { languageCode: voice.slice(0, 5), name: voice },
+        audioConfig: { audioEncoding: 'MP3', speakingRate: 1.0 },
+      }),
     });
-    const data = await r.json();
-    if (!r.ok) return res.status(500).json({ error: data?.error?.message || JSON.stringify(data) });
-    const buf = Buffer.from(data.audioContent, 'base64');
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok || !out.audioContent) {
+      throw httpError(502, 'Voice service error: ' + ((out.error && out.error.message) || r.status));
+    }
+    const buf = Buffer.from(out.audioContent, 'base64');
+    res.statusCode = 200;
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.status(200).send(buf);
-  } catch (e) {
-    res.status(500).json({ error: String(e) });
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(buf);
+  } catch (err) {
+    fail(res, err);
   }
-}
+};
