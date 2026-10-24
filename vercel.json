@@ -1,5 +1,5 @@
 {
   "functions": {
-    "api/speak.js": { "maxDuration": 15 }
+    "api/ask.js": { "maxDuration": 60 }
   }
 }
