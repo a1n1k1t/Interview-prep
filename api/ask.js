@@ -110,12 +110,22 @@ module.exports = async function handler(req, res) {
       payload.tools = [{ type: SEARCH_TOOL, name: 'web_search', max_uses: task.search }];
     }
 
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
+    const callClaude = () => fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify(payload),
     });
-    const out = await r.json().catch(() => ({}));
+    let r = await callClaude();
+    let out = await r.json().catch(() => ({}));
+    // Some models refuse a forced tool choice. If so, let the model choose and tell it to use the tool.
+    if (!r.ok && schema && /tool_choice/i.test((out && out.error && out.error.message) || '')) {
+      payload.tool_choice = { type: 'auto' };
+      const note = 'You must reply by calling the submit tool with the complete result. Do not write any other text.';
+      if (Array.isArray(payload.system)) payload.system.push({ type: 'text', text: note });
+      else payload.system = (payload.system ? payload.system + '\n\n' : '') + note;
+      r = await callClaude();
+      out = await r.json().catch(() => ({}));
+    }
     if (!r.ok) {
       const msg = (out && out.error && out.error.message) || ('Claude API error ' + r.status);
       throw httpError(502, 'The AI service returned an error: ' + msg);
